@@ -56,7 +56,7 @@ init_state = {}
 
 #read resource file
 resources_reader = csv.reader(resources_file)
-resources_header = next(resources_reader)
+resources_header = [x.strip() for x in next(resources_reader)]
 resources_rows = []
 
 for row in resources_reader:
@@ -71,22 +71,27 @@ if len(resources_rows) != 1:
 #build resource dict
 for i in range(len(resources_header)):
     try:
-        resources[resources_header[i]] = int(resources_rows[0][i])
+        resources[resources_header[i].strip()] = int(resources_rows[0][i])
     except:
         if resources_rows[0][i].strip() != 'x':
             err('Resource weights can only be int or "x"')
         else:
-            resources[resources_header[i]] = resources_rows[0][i].strip()
+            resources[resources_header[i].strip()] = resources_rows[0][i].strip()
 
 #print(resources) #debug
 
 #read init state file
 state_reader = csv.reader(state_file)
-state_header = next(state_reader)
+state_header = [x.strip() for x in next(state_reader)]
 state_rows = []
 
 for row in state_reader:
     state_rows.append(row)
+
+print('state header')
+print(state_header)
+print('resource header')
+print(resources_header)
 
 #Ensure state file and resource file resources are the same
 if (set(state_header[1:]) != set(resources_header)):
@@ -95,15 +100,22 @@ if (set(state_header[1:]) != set(resources_header)):
 
 
 #build state dict: TODO
-for i in range(len(resources_header)):
-    try:
-        resources[resources_header[i]] = int(resources_rows[0][i])
-    except:
-        if resources_rows[0][i].strip() != 'x':
-            err('Resource weights can only be int or "x"')
-        else:
-            resources[resources_header[i]] = resources_rows[0][i].strip()
-#sanity check - country name exists in state structure
+for row in state_rows:
+    country = row[0].strip()
+    init_state[country] = {}
+    for i in range(1, len(row)):
+        try:
+            init_state[country][state_header[i].strip()] = int(row[i].strip())
+        except:
+            err('Please ensure all resource state values in state input file "' + state_filename + '" are integers')
+         
 
+#sanity check - country name exists in state structure
+if my_country not in init_state:
+    err('Please ensure ' + my_country + ' is included in the state file ' + state_filename)
+
+print('\n\n')
+print(init_state)
 
 #initialize and run scheduler
+print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
