@@ -26,16 +26,13 @@
 from functools import total_ordering
 from typing import Callable
 import copy
+from actions import Actionable_Transfer, Actionable_Transform
 
-
-class Action:
-    def __init__(self):
-        self.p = 'x'
 
 #Just use to hold and get information about the state that needs to be memoized
 @total_ordering
 class State_Node:
-    def __init__(self, state: dict, schedule: list[Action], schedule_likelihood: float, expected_utility: float):
+    def __init__(self, state: dict, schedule: list, schedule_likelihood: float, expected_utility: float):
         self.state = state
         self.schedule = schedule
         self.schedule_likelihood = schedule_likelihood
@@ -52,5 +49,29 @@ class State_Node:
     def __copy__(self):
         return State_Node(state=copy.deepcopy(self.state), schedule=copy.copy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
 
+#All functionality for creating a new state node from a state and transaction
+#Is a static, one-use object
+class State_Generator:
 
+    def buildNewState(init_state: State_Node, transaction, scalar: int) -> State_Node:
+        #should probably actually implement this copy method
+        newState = State_Node(state=copy.deepcopy(init_state.state), schedule= copy.copy(init_state.schedule), schedule_likelihood=init_state.schedule_likelihood, expected_utility=-1 )
+        if isinstance(transaction, Actionable_Transfer):
 
+            #perform action on new state
+            transaction.perform(stateNode=newState, scalar=scalar)
+
+            #persist action persistable on schedule
+            persistable = transaction.convertToPersistable(scalar=scalar)
+            newState.schedule.append(persistable)
+            #calculate the likelihood of the new transaction, based on the discounted reward  of country2 put into sigmoid function
+            transaction_likelihood  = .9 # should be sigmoid(discounted_reward(newState, country=transaction.country2, self.?initReward[country2], self.statequalfunc? ))
+            #can multiply of sigmoid of country 1 as well, if it's not my_country!!!
+            #use new transactio likelihood to set state likelihood
+            newState.schedule_likelihood = newState.schedule_likelihood * transaction_likelihood
+
+            #calculate expected utility, using country1 discounted reward and schedule likelihood
+            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY), self.initReward[my_country], self.statequalFunc)
+            
+            #return the new state
+        if isinstance(transaction, Actionable_Transform):
