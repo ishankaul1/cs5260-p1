@@ -1,4 +1,5 @@
-#Class to encapsulate all information needed to represent a 'state' node in our schedule optimization search.
+#Module to hold all logic for representing and generating states, as well as doing calculations around states.
+
 #Key variables:
 #   state: DICT - representation of current world
 #   schedule: array[Actions] - The schedule of actions up to this point
@@ -23,6 +24,7 @@
 #   calc_total_likelihood(): gives the final likelihood of this state. Multiplies init likelihood with likelihood of the new transaction
 #   calc_expected_utility(): calculates expected utility based on total likelihood and discounted reward
 #   get_utility(): return the calculated utility
+from argparse import Action
 from functools import total_ordering
 from typing import Callable
 import copy
@@ -52,10 +54,16 @@ class State_Node:
 #All functionality for creating a new state node from a state and transaction
 #Is a static, one-use object
 class State_Generator:
+    #TODO: Initialize with an init_state dict (initial state of the resources) AND a state quality function.
+    #These will be used globally for calculations at all levels.
 
-    def buildNewState(init_state: State_Node, transaction, scalar: int) -> State_Node:
+
+
+    #Takes in an initial state and 
+    #TODO: simplify this logic. 
+    def buildStateFromTransform(init_state: State_Node, transaction: Action, scalar: int) -> State_Node:
         #should probably actually implement this copy method
-        newState = State_Node(state=copy.deepcopy(init_state.state), schedule= copy.copy(init_state.schedule), schedule_likelihood=init_state.schedule_likelihood, expected_utility=-1 )
+        newState = State_Node(state=copy.deepcopy(init_state.state), schedule= copy.copy(init_state.schedule), schedule_likelihood=init_state.schedule_likelihood, expected_utility=init_state.expected_utility )
         if isinstance(transaction, Actionable_Transfer):
 
             #perform action on new state
@@ -71,7 +79,23 @@ class State_Generator:
             newState.schedule_likelihood = newState.schedule_likelihood * transaction_likelihood
 
             #calculate expected utility, using country1 discounted reward and schedule likelihood
-            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY), self.initReward[my_country], self.statequalFunc)
+            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY,  self.initReward[my_country], self.statequalFunc)
             
             #return the new state
         if isinstance(transaction, Actionable_Transform):
+
+            #perform action on new state
+            transaction.perform(stateNode=newState, scalar=scalar)
+
+            #persist action on schedule
+            persistable = transaction.convertToPersistable(scalar=scalar)
+
+            newState.schedule.append(persistable)
+
+            #likelihood of transform is always 1; don't need to change schedule likelihood
+
+            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY,  self.initReward[my_country], self.statequalFunc)
+
+    #Calculates overall discounted reward for a state & country. Needs state quality function and init reward passed in.
+    #Formula: 
+    def calc_discounted_reward(state: State_Node, country: str, init_reward: float, state_quality_func: function):

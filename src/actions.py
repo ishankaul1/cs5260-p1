@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from state_node import State_Node
+from state import State_Node
 
 #list of these should be read in from input file or defined at start of serach
 class Transform_Template:
@@ -25,10 +25,16 @@ class Action(ABC):
     def perform(state: State_Node, scalar: int) -> State_Node: 
         pass
 
+class Persistable_Action(ABC):
+    #just print out what's happening
+    @abstractmethod
+    def debug(self):
+        pass
+
 
 #TODO: abstract base class for persistable
 #These are actually to be stored in the schedule for a new state, after performing the action template and scalar on the state
-class Persistable_Transform:
+class Persistable_Transform(Persistable_Action):
     #resources in {}
     def __init__(self, transform_template: Transform_Template,  country: str):
         self.transform_template = transform_template
@@ -40,9 +46,9 @@ class Persistable_Transform:
         print("\tInput: {"  + ','.join([resource + ': ' + str(self.transform_template.input_resources[resource]) for resource in self.transform_template.input_resources]) + "}" )
         print("\tOutput: {"  + ','.join([resource + ': ' + str(self.transform_template.output_resources[resource]) for resource in self.transform_template.output_resources]) + "}\n" )
 
-class Persistable_Transfer:
-    def __init__(self, transfer: Transfer_Template, country1: str, country2: str):
-        self.transfer = transfer
+class Persistable_Transfer(Persistable_Action):
+    def __init__(self, transfer_template: Transfer_Template, country1: str, country2: str):
+        self.transfer_template = transfer_template
         self.country1 = country1
         self.country2 = country2
 
@@ -56,14 +62,38 @@ class Persistable_Transfer:
 
 #These are created at the very start of the program, one for each transform template. These are to be used to determine whether a transform is possible on a state, and to actually make the transform on the state.
 class Actionable_Transform(Action):
-    def __init__(self, transform: Transform_Template, country: str):
-        self.transform = transform
+    def __init__(self, transform_template: Transform_Template, country: str):
+        self.transform_template = transform_template
         self.country = country
-    def isValidForState(state: State_Node, scalar: int) -> bool:
-        pass #TODO: implement
-    def perform(state: State_Node, scalar: int) -> State_Node:
-        pass #TODO: implement
-    def convertToPersistable(scalar: int):
+    def isValidForState(self, state: State_Node, scalar: int) -> bool:
+        #checks if input resource amounts * scalar is <= the same resource in the state
+       
+        #state in country: resource: value format
+        #transform_template.input_resources and .output_resources in {resource: value} format
+        
+        # if (self.transfer_template.resource1_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource1] or (self.transfer_template.resource2_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource2]:
+        #     return False
+
+        for resource in self.transform_template.input_resources:
+            if (state.state[self.country][resource] < self.transform_template.input_resources[resource] * scalar):
+                return False
+
+        return True
+
+    def perform(self, state: State_Node, scalar: int) -> State_Node:
+        #subtract all input resources * scalar, add all output resources * scalar
+        if not self.isValidForState(state, scalar) :
+            raise Exception('Please check that transaction is valid for state before trying to run it.')
+
+        for resource in self.transform_template.input_resources:
+            state.state[self.country][resource] = state.state[self.country][resource] - (self.transform_template.input_resources[resource] * scalar)
+
+        for resource in self.transform_template.output_resources:
+            state.state[self.country][resource] = state.state[self.country][resource] + (self.transform_template.output_resources[resource] * scalar)
+
+        return state
+
+    def convertToPersistable(self, scalar: int):
         pass #TODO
 
 #These are created at the very start of the program, one for each transfer template * country (country1 is always your own country). These are to be used to determine whether a transfer is possible on a state, and to actually make the transfer on the state.
@@ -76,7 +106,7 @@ class Actionable_Transfer(Action):
     def isValidForState(self, stateNode: State_Node, scalar: int) -> bool:
         #checks if both countries have enough of their respective resources in the state using transform template and scalar
        
-       #resource and state in country: resource: value format
+        #resource and state in country: resource: value format
         
         if (self.transfer_template.resource1_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource1] or (self.transfer_template.resource2_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource2]:
             return False
@@ -86,7 +116,7 @@ class Actionable_Transfer(Action):
     #subtract c1 loses r1 and gains r2, c2 loses r2 and gains r1 
     def perform(self, stateNode: State_Node, scalar: int) -> State_Node:
         if not self.isValidForState(stateNode, scalar) :
-            return stateNode 
+            raise Exception('Please check that transaction is valid for state before trying to run it.')
 
         stateNode.state[self.country1][self.transfer_template.resource1] = stateNode.state[self.country1][self.transfer_template.resource1] - (self.transfer_template.resource1_amount * scalar) 
         stateNode.state[self.country1][self.transfer_template.resource2] = stateNode.state[self.country1][self.transfer_template.resource2] + (self.transfer_template.resource2_amount * scalar)
