@@ -24,11 +24,12 @@
 #   calc_total_likelihood(): gives the final likelihood of this state. Multiplies init likelihood with likelihood of the new transaction
 #   calc_expected_utility(): calculates expected utility based on total likelihood and discounted reward
 #   get_utility(): return the calculated utility
-from argparse import Action
+
 from functools import total_ordering
 from typing import Callable
 import copy
-from actions import Actionable_Transfer, Actionable_Transform
+import actions
+#rom actions import Actionable_Transfer, Actionable_Transform
 
 
 #Just use to hold and get information about the state that needs to be memoized
@@ -61,13 +62,15 @@ class State_Generator:
 
     #Takes in an initial state and 
     #TODO: simplify this logic. 
-    def buildStateFromTransform(init_state: State_Node, transaction: Action, scalar: int) -> State_Node:
-        #should probably actually implement this copy method
+    def buildStateFromTransform(init_state: State_Node, transaction: actions.Action, scalar: int) -> State_Node:
+        #Test out copy.copy instead of this
         newState = State_Node(state=copy.deepcopy(init_state.state), schedule= copy.copy(init_state.schedule), schedule_likelihood=init_state.schedule_likelihood, expected_utility=init_state.expected_utility )
-        if isinstance(transaction, Actionable_Transfer):
+        
+        #check if valid first
+        if isinstance(transaction, actions.Actionable_Transfer):
 
             #perform action on new state
-            transaction.perform(stateNode=newState, scalar=scalar)
+            #transaction.perform(stateNode=newState, scalar=scalar)
 
             #persist action persistable on schedule
             persistable = transaction.convertToPersistable(scalar=scalar)
@@ -82,10 +85,10 @@ class State_Generator:
             newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY,  self.initReward[my_country], self.statequalFunc)
             
             #return the new state
-        if isinstance(transaction, Actionable_Transform):
+        if isinstance(transaction, actions.Actionable_Transform):
 
             #perform action on new state
-            transaction.perform(stateNode=newState, scalar=scalar)
+            #transaction.perform(stateNode=newState, scalar=scalar)
 
             #persist action on schedule
             persistable = transaction.convertToPersistable(scalar=scalar)
@@ -98,4 +101,48 @@ class State_Generator:
 
     #Calculates overall discounted reward for a state & country. Needs state quality function and init reward passed in.
     #Formula: 
-    def calc_discounted_reward(state: State_Node, country: str, init_reward: float, state_quality_func: function):
+    def calc_discounted_reward(state: State_Node, country: str):
+        pass
+
+
+def test_stateCopy():
+    state1 = {'X1': {'poo': 4},
+        'X2': {'pee': 5}, 
+        'X3': {'fart': 6}
+    }
+
+    stateNode1 = State_Node(state=state1, schedule=[], schedule_likelihood=1, expected_utility=5)
+
+    stateNode2 = copy.copy(stateNode1)
+
+    stateNode2.state['X1']['poo'] = 12
+    stateNode2.schedule.append(5)
+    stateNode2.schedule_likelihood = .5
+    stateNode2.expected_utility = 10
+
+    print("DICT:\n------")
+    print("\tS1:")
+    print(stateNode1.state)
+    print("\tS2:")
+    print(stateNode2.state)
+
+    print("SCHEDULE:\n------")
+    print("\tS1:")
+    print(stateNode1.schedule)
+    print("\tS2:")
+    print(stateNode2.schedule)
+
+    print("LIKELIHOOD:\n------")
+    print("\tS1:")
+    print(stateNode1.schedule_likelihood)
+    print("\tS2:")
+    print(stateNode2.schedule_likelihood)
+
+    print("UTIL:\n------")
+    print("\tS1:")
+    print(stateNode1.expected_utility)
+    print("\tS2:")
+    print(stateNode2.expected_utility)
+
+
+test_stateCopy()
