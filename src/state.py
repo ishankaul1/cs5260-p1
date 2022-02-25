@@ -30,11 +30,11 @@ from typing import Callable
 import copy
 import actions
 #rom actions import Actionable_Transfer, Actionable_Transform
-
+import actions
 
 #Just use to hold and get information about the state that needs to be memoized
 @total_ordering
-class State_Node:
+class StateNode:
     def __init__(self, state: dict, schedule: list, schedule_likelihood: float, expected_utility: float):
         self.state = state
         self.schedule = schedule
@@ -50,68 +50,88 @@ class State_Node:
 
     #safely copy state st operations on the new copy will not affect the old state
     def __copy__(self):
-        return State_Node(state=copy.deepcopy(self.state), schedule=copy.copy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
+        return StateNode(state=copy.deepcopy(self.state), schedule=copy.copy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
 
 #All functionality for creating a new state node from a state and transaction
 #Is a static, one-use object
-class State_Generator:
+class StateGenerator:
     #TODO: Initialize with an init_state dict (initial state of the resources) AND a state quality function.
     #These will be used globally for calculations at all levels.
 
+    # #Logic for validating a single action against a state
+    def isvalidactionforstate(self, action: actions.Action, statenode: StateNode, scalar: int) -> bool:
+        if isinstance(action, actions.ActionableTransfer):
+            return self.isvalidtransferforstate(action, statenode, scalar)
+        elif isinstance(action, actions.ActionableTransform):
+            return self.isvalidtransformforstate(action, statenode, scalar)
+        return False
 
+    def isvalidtransferforstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> bool:
+        # #TODO: add resource validation
+        if (action.template.resource1_amount * scalar) > statenode.state[self.country1][action.template.resource1] or (action.transfer_template.resource2_amount * scalar) > statenode.state[self.country1][self.transfer_template.resource2]:
+            return False
+        return True
 
-    #Takes in an initial state and 
+    def isvalidtransformforstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> bool:
+        # #TODO: add resource validation
+        for resource in self.transform_template.input_resources:
+            if statenode.state[action.country][resource] < action.transform_template.input_resources[resource] * scalar:
+                return False
+        return True
+
+    # #Logic for performing a single action on a state. Copies the state, performs, and outputs the new state.
+    def performactiononstate(self,action: actions.Action, statenode: StateNode, scalar: int ) -> StateNode:
+        newstate = copy.copy(statenode)
+        if isinstance(action, actions.ActionableTransfer):
+            self.performtransferonnewstate(statenode=newstate, action=action, scalar=scalar)
+        elif isinstance(action, actions.ActionableTransform):
+            self.performtransformonnewstate(statenode=newstate, action=action, scalar=scalar)
+        else:
+            print("WARNING: performed null action on copied state")
+        return newstate
+
+    #Edits state with a transfer action
+    def performtransferonnewstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> None:
+        statenode.state[action.country1][action.template.resource1] = statenode.state[action.country1][action.template.resource1] - (action.template.resource1_amount * scalar)
+        statenode.state[action.country1][action.transfer_template.resource2] = statenode.state[action.country1][action.template.resource2] + (action.template.resource2_amount * scalar)
+        statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][action.template.resource2] - (action.template.resource2_amount * scalar)
+        statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][action.template.resource1] + (action.template.resource1_amount * scalar)
+
+    #Edits state with a transfer action
+    def performtransformonnewstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> None:
+        for resource in self.transform_template.input_resources:
+            statenode.state[action.country][resource] = statenode.state[action.country][resource] - (action.template.input_resources[resource] * scalar)
+        for resource in self.transform_template.output_resources:
+            statenode.state[action.country][resource] = statenode.state[action.country][resource] + (action.template.output_resources[resource] * scalar)
+
     #TODO: simplify this logic. 
-    def buildStateFromTransform(init_state: State_Node, transaction: actions.Action, scalar: int) -> State_Node:
-        #Test out copy.copy instead of this
-        newState = State_Node(state=copy.deepcopy(init_state.state), schedule= copy.copy(init_state.schedule), schedule_likelihood=init_state.schedule_likelihood, expected_utility=init_state.expected_utility )
-        
-        #check if valid first
-        if isinstance(transaction, actions.Actionable_Transfer):
+    def buildNewStateFromTransform(init_state: StateNode, transaction: actions.Action, scalar: int) -> StateNode:
+        # #1. Check if action is valid (driver can do this too, might be better)
 
-            #perform action on new state
-            #transaction.perform(stateNode=newState, scalar=scalar)
+        # #2. Perform action and grab new state
 
-            #persist action persistable on schedule
-            persistable = transaction.convertToPersistable(scalar=scalar)
-            newState.schedule.append(persistable)
-            #calculate the likelihood of the new transaction, based on the discounted reward  of country2 put into sigmoid function
-            transaction_likelihood  = .9 # should be sigmoid(discounted_reward(newState, country=transaction.country2, self.?initReward[country2], self.statequalfunc? ))
-            #can multiply of sigmoid of country 1 as well, if it's not my_country!!!
-            #use new transactio likelihood to set state likelihood
-            newState.schedule_likelihood = newState.schedule_likelihood * transaction_likelihood
+        # #3. Calculate likelihood of new transaction, using discounted reward of second country * sigmoid if transfer and =1 if transform
 
-            #calculate expected utility, using country1 discounted reward and schedule likelihood
-            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY,  self.initReward[my_country], self.statequalFunc)
-            
-            #return the new state
-        if isinstance(transaction, actions.Actionable_Transform):
+        # #4. Multiply transaction likelihood on new state  by new transaction likelihood
 
-            #perform action on new state
-            #transaction.perform(stateNode=newState, scalar=scalar)
+        # #5. Use country1 discounted reward and likelihood to calc expected utility
 
-            #persist action on schedule
-            persistable = transaction.convertToPersistable(scalar=scalar)
-
-            newState.schedule.append(persistable)
-
-            #likelihood of transform is always 1; don't need to change schedule likelihood
-
-            newState.expected_utility = newState.expected_utility #should use current likelihood value * discounted_reward(newState, country=MY_COUNTRY,  self.initReward[my_country], self.statequalFunc)
+        # #Return!!
+        pass
 
     #Calculates overall discounted reward for a state & country. Needs state quality function and init reward passed in.
     #Formula: 
-    def calc_discounted_reward(state: State_Node, country: str):
+    def calc_discounted_reward(state: StateNode, country: str):
         pass
 
-
+#plz move this somewhere
 def test_stateCopy():
     state1 = {'X1': {'poo': 4},
         'X2': {'pee': 5}, 
         'X3': {'fart': 6}
     }
 
-    stateNode1 = State_Node(state=state1, schedule=[], schedule_likelihood=1, expected_utility=5)
+    stateNode1 = StateNode(state=state1, schedule=[], schedule_likelihood=1, expected_utility=5)
 
     stateNode2 = copy.copy(stateNode1)
 

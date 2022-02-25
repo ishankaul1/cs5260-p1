@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 
 
 #list of these should be read in from input file or defined at start of serach
-class Transform_Template:
+class TransformTemplate:
     def __init__(self, input_resources: dict, output_resources: dict):
         self.input_resources = input_resources #form; {resource: value}
         self.output_resources = output_resources #form: {resource: value}
 
 #all possible transfer ratios should be determined based on the resources file
-class Transfer_Template:
+class TransferTemplate:
     def __init__(self, resource1, resource1_amount, resource2, resource2_amount):
         self.resource1 = resource1
         self.resource1_amount = resource1_amount
@@ -17,122 +17,73 @@ class Transfer_Template:
 
 #base class for actions
 class Action(ABC):
-    pass
+    def __init__(self, template):
+        self.template = template
 
-class Persistable_Action(ABC):
+class PersistableAction(ABC):
     #just print out what's happening
     @abstractmethod
     def debug(self):
         pass
 
 
-#TODO: abstract base class for persistable
+
 #These are actually to be stored in the schedule for a new state, after performing the action template and scalar on the state
-class Persistable_Transform(Persistable_Action):
+class PersistableTransform(PersistableAction):
     #resources in {}
-    def __init__(self, transform_template: Transform_Template,  country: str):
-        self.transform_template = transform_template
+    def __init__(self, template: TransformTemplate,  country: str):
+        self.template = template
         self.country = country
         
     def debug(self):
         print("TRANSFORM: ")
         print("\tCountry: " + self.country)
-        print("\tInput: {"  + ','.join([resource + ': ' + str(self.transform_template.input_resources[resource]) for resource in self.transform_template.input_resources]) + "}" )
-        print("\tOutput: {"  + ','.join([resource + ': ' + str(self.transform_template.output_resources[resource]) for resource in self.transform_template.output_resources]) + "}\n" )
+        print("\tInput: {"  + ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]) + "}" )
+        print("\tOutput: {"  + ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) + "}\n" )
 
-class Persistable_Transfer(Persistable_Action):
-    def __init__(self, transfer_template: Transfer_Template, country1: str, country2: str):
-        self.transfer_template = transfer_template
+class PersistableTransfer(PersistableAction):
+    def __init__(self, template: TransferTemplate, country1: str, country2: str):
+        self.template = template
         self.country1 = country1
         self.country2 = country2
 
     def debug(self):
         print("TRANSFER:")
         print("\tCountry1: " + self.country1)
-        print("\tResource1: {" + self.transfer.resource1 + ": " + str(self.transfer.resource1_amount) + "}")
+        print("\tResource1: {" + self.template.resource1 + ": " + str(self.template.resource1_amount) + "}")
         print("\tCountry2: " + self.country2)
-        print("\tResource2: {" + self.transfer.resource2 + ": " + str(self.transfer.resource2_amount) + "}\n")
+        print("\tResource2: {" + self.template.resource2 + ": " + str(self.template.resource2_amount) + "}\n")
 
 
 #These are created at the very start of the program, one for each transform template. These are to be used to determine whether a transform is possible on a state, and to actually make the transform on the state.
-class Actionable_Transform(Action):
-    def __init__(self, transform_template: Transform_Template, country: str):
-        self.transform_template = transform_template
+class ActionableTransform(Action):
+    def __init__(self, template: TransformTemplate, country: str):
+        # self.transform_template = transform_template
+        super().__init__(template=template)
         self.country = country
-    #TODO: Move to state logic
-    # def isValidForState(self, state: State_Node, scalar: int) -> bool:
-    #     #checks if input resource amounts * scalar is <= the same resource in the state
-
-    #     for resource in self.transform_template.input_resources:
-    #         if (state.state[self.country][resource] < self.transform_template.input_resources[resource] * scalar):
-    #             return False
-
-    #     return True
-    # #TODO: Move to state logic
-    # def perform(self, state: State_Node, scalar: int) -> State_Node:
-    #     #subtract all input resources * scalar, add all output resources * scalar
-    #     if not self.isValidForState(state, scalar) :
-    #         raise Exception('Please check that transaction is valid for state before trying to run it.')
-
-    #     for resource in self.transform_template.input_resources:
-    #         state.state[self.country][resource] = state.state[self.country][resource] - (self.transform_template.input_resources[resource] * scalar)
-
-    #     for resource in self.transform_template.output_resources:
-    #         state.state[self.country][resource] = state.state[self.country][resource] + (self.transform_template.output_resources[resource] * scalar)
-
-    #     return state
 
     def convertToPersistable(self, scalar: int):
         pass #TODO
 
 #These are created at the very start of the program, one for each transfer template * country (country1 is always your own country). These are to be used to determine whether a transfer is possible on a state, and to actually make the transfer on the state.
-class Actionable_Transfer(Action):
-    def __init__(self, transfer_template: Transfer_Template, country1: str, country2: str):
-        self.transfer_template = transfer_template
+class ActionableTransfer(Action):
+    def __init__(self, template: TransferTemplate, country1: str, country2: str):
+        super().__init__(template=template)
         self.country1 = country1
         self.country2 = country2
-
-    #TODO: Move to state logic
-    # def isValidForState(self, stateNode: State_Node, scalar: int) -> bool:
-    #     #checks if both countries have enough of their respective resources in the state using transform template and scalar
-       
-    #     #resource and state in country: resource: value format
         
-    #     if (self.transfer_template.resource1_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource1] or (self.transfer_template.resource2_amount * scalar) > stateNode.state[self.country1][self.transfer_template.resource2]:
-    #         return False
+    def convertToPersistable(self, scalar: int) -> PersistableTransfer:
+        return PersistableTransfer(TransferTemplate(self.template.resource1, self.template.resource1_amount * scalar, self.template.resource2, self.template.resource2_amount * scalar), self.country1, self.country2)
 
-    #     return True
-
-    # #TODO: Move to state logic
-    # #subtract c1 loses r1 and gains r2, c2 loses r2 and gains r1 
-    # def perform(self, stateNode: State_Node, scalar: int) -> State_Node:
-    #     if not self.isValidForState(stateNode, scalar) :
-    #         raise Exception('Please check that transaction is valid for state before trying to run it.')
-
-    #     stateNode.state[self.country1][self.transfer_template.resource1] = stateNode.state[self.country1][self.transfer_template.resource1] - (self.transfer_template.resource1_amount * scalar) 
-    #     stateNode.state[self.country1][self.transfer_template.resource2] = stateNode.state[self.country1][self.transfer_template.resource2] + (self.transfer_template.resource2_amount * scalar)
-
-    #     stateNode.state[self.country2][self.transfer_template.resource2] = stateNode.state[self.country2][self.transfer_template.resource2] - (self.transfer_template.resource2_amount * scalar) 
-    #     stateNode.state[self.country2][self.transfer_template.resource2] = stateNode.state[self.country2][self.transfer_template.resource1] + (self.transfer_template.resource1_amount * scalar)
-
-    #     return stateNode
-
-        
-    def convertToPersistable(self, scalar: int) -> Persistable_Transfer:
-        return Persistable_Transfer(Transfer_Template(self.transfer_template.resource1, self.transfer_template.resource1_amount * scalar, self.transfer_template.resource2, self.transfer_template.resource2_amount * scalar), self.country1, self.country2)
-
-
-
-    
-
+#Move the damn tests lol
 # def persistableTransformPrintTest():
 #     p = Persistable_Transform(transform_template=Transform_Template(input_resources={'r1': 4, 'r2': 8}, output_resources={'r3': 3}), country='Poopadovia')
 #     p.debug()
     
-# def persistableTransferPrintTest():
-#     a = Actionable_Transfer(transfer_template=Transfer_Template('poopsticks', 5, 'cheeseballs', 3), country1='Pooplantis', country2="Swagamerica")
-#     p = a.convertToPersistable(3)
-#     p.debug()
+def persistableTransferPrintTest():
+    a = ActionableTransfer(template=TransferTemplate('poopsticks', 5, 'cheeseballs', 3), country1='Pooplantis', country2="Swagamerica")
+    p = a.convertToPersistable(3)
+    p.debug()
 
 # persistableTransformPrintTest()
-# persistableTransferPrintTest()
+persistableTransferPrintTest()
