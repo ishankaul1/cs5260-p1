@@ -68,14 +68,14 @@ class StateGenerator:
 
     def isvalidtransferforstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> bool:
         # #TODO: add resource validation
-        if (action.template.resource1_amount * scalar) > statenode.state[self.country1][action.template.resource1] or (action.transfer_template.resource2_amount * scalar) > statenode.state[self.country1][self.transfer_template.resource2]:
+        if (action.template.resource1_amount * scalar) > statenode.state[action.country1][action.template.resource1] or (action.template.resource2_amount * scalar) > statenode.state[action.country1][action.template.resource2]:
             return False
         return True
 
     def isvalidtransformforstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> bool:
         # #TODO: add resource validation
-        for resource in self.transform_template.input_resources:
-            if statenode.state[action.country][resource] < action.transform_template.input_resources[resource] * scalar:
+        for resource in action.template.input_resources:
+            if statenode.state[action.country][resource] < action.template.input_resources[resource] * scalar:
                 return False
         return True
 
@@ -124,45 +124,3 @@ class StateGenerator:
     def calc_discounted_reward(state: StateNode, country: str):
         pass
 
-#plz move this somewhere
-def test_stateCopy():
-    state1 = {'X1': {'poo': 4},
-        'X2': {'pee': 5}, 
-        'X3': {'fart': 6}
-    }
-
-    stateNode1 = StateNode(state=state1, schedule=[], schedule_likelihood=1, expected_utility=5)
-
-    stateNode2 = copy.copy(stateNode1)
-
-    stateNode2.state['X1']['poo'] = 12
-    stateNode2.schedule.append(5)
-    stateNode2.schedule_likelihood = .5
-    stateNode2.expected_utility = 10
-
-    print("DICT:\n------")
-    print("\tS1:")
-    print(stateNode1.state)
-    print("\tS2:")
-    print(stateNode2.state)
-
-    print("SCHEDULE:\n------")
-    print("\tS1:")
-    print(stateNode1.schedule)
-    print("\tS2:")
-    print(stateNode2.schedule)
-
-    print("LIKELIHOOD:\n------")
-    print("\tS1:")
-    print(stateNode1.schedule_likelihood)
-    print("\tS2:")
-    print(stateNode2.schedule_likelihood)
-
-    print("UTIL:\n------")
-    print("\tS1:")
-    print(stateNode1.expected_utility)
-    print("\tS2:")
-    print(stateNode2.expected_utility)
-
-
-test_stateCopy()

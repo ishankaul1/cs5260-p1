@@ -80,10 +80,10 @@ class ActionableTransfer(Action):
 #     p = Persistable_Transform(transform_template=Transform_Template(input_resources={'r1': 4, 'r2': 8}, output_resources={'r3': 3}), country='Poopadovia')
 #     p.debug()
     
-def persistableTransferPrintTest():
-    a = ActionableTransfer(template=TransferTemplate('poopsticks', 5, 'cheeseballs', 3), country1='Pooplantis', country2="Swagamerica")
-    p = a.convertToPersistable(3)
-    p.debug()
-
-# persistableTransformPrintTest()
-persistableTransferPrintTest()
+# def persistableTransferPrintTest():
+#     a = ActionableTransfer(template=TransferTemplate('poopsticks', 5, 'cheeseballs', 3), country1='Pooplantis', country2="Swagamerica")
+#     p = a.convertToPersistable(3)
+#     p.debug()
+#
+# # persistableTransformPrintTest()
+# persistableTransferPrintTest()
