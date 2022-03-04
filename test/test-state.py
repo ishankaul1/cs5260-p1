@@ -7,6 +7,8 @@ sys.path.append('../src')
 import state as st
 import actions as actions
 
+#USAGE: self.assertTrue(self.statenode.state['X1']['water'] == 4)
+
 class TestState(unittest.TestCase):
     def setUp(self) -> None:
         state = {'X1': {'water': 4, 'earth': 3, 'fire': 2},
@@ -80,9 +82,34 @@ class TestState(unittest.TestCase):
         self.assertFalse(self.stategenerator.isvalidtransferforstate(badtransfer, self.statenode, 1))
 
     def test_performtransform(self):
-        pass
+        goodtransform = self.createGoodBadTransforms()[0]
+        self.stategenerator.performtransformonnewstate(goodtransform, self.statenode, 1)
+        #Check that the right stuff changed
+        self.assertTrue(self.statenode.state['X3']['water'] == 2)
+        self.assertTrue(self.statenode.state['X3']['earth'] == 1)
+        self.assertTrue(self.statenode.state['X3']['fire'] == 18)
+
+        #Countries that weren't affected by change stayed the same
+        self.assertTrue(self.statenode.state['X1']['water'] == 4)
+        self.assertTrue(self.statenode.state['X1']['earth'] == 3)
+        self.assertTrue(self.statenode.state['X1']['fire'] == 2)
+
+        self.resetStateNode()
+
     def test_performtransfer(self):
-        pass
+        goodtransfer = self.createGoodBadTransfers()[0]
+        print(self.statenode.state)
+        self.stategenerator.performtransferonnewstate(goodtransfer, self.statenode, 1)
+
+        self.assertTrue(self.statenode.state['X3']['water'] == 3)
+        self.assertTrue(self.statenode.state['X3']['earth'] == 10)
+        self.assertTrue(self.statenode.state['X3']['fire'] == 6) #unchanged
+
+        self.assertTrue(self.statenode.state['X1']['water'] == 9)
+        self.assertTrue(self.statenode.state['X1']['earth'] == 0)
+        self.assertTrue(self.statenode.state['X1']['fire'] == 2) #unchanged
+
+        self.resetStateNode()
 
 if __name__ == '__main__':
     unittest.main()
