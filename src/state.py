@@ -55,8 +55,22 @@ class StateNode:
 #All functionality for creating a new state node from a state and transaction
 #Is a static, one-use object
 class StateGenerator:
-    #TODO: Initialize with an init_state dict (initial state of the resources) AND a state quality function.
-    #These will be used globally for calculations at all levels.
+    #Initial state - state of the world at the very beginning. Used to calculate initial state qualities for later discounted reward calculation.
+    #State quality function - takes in a dict of {resouce: value} mappings for ONE country, and outputs an int that represents the quality of the state for that country.
+    def __init__(self, my_country: str, init_state: dict, state_quality_function: callable()):
+        self.my_country = my_country
+        self.state_quality_function = state_quality_function
+        #For all state generation, we need to have access to the INITIAL utility of each country, so that we can determine
+        #the final discounted reward of each transaction
+        self.init_utilities: dict = self.calc_init_utilities(init_state)
+
+    def calc_init_utilities(self, init_state: dict) -> dict:
+        init_utilities = {}
+        for country in init_state:
+            init_utilities[country] = self.state_quality_function(init_state[country])
+
+        return init_utilities
+
 
     # #Logic for validating a single action against a state
     def isvalidactionforstate(self, action: actions.Action, statenode: StateNode, scalar: int) -> bool:
@@ -79,48 +93,67 @@ class StateGenerator:
                 return False
         return True
 
-    # #Logic for performing a single action on a state. Copies the state, performs, and outputs the new state.
+    # #Logic for performing a single action on a state
     def performactiononstate(self,action: actions.Action, statenode: StateNode, scalar: int ) -> StateNode:
-        newstate = copy.copy(statenode)
         if isinstance(action, actions.ActionableTransfer):
-            self.performtransferonnewstate(statenode=newstate, action=action, scalar=scalar)
+            self.performtransferonnewstate(statenode=statenode, action=action, scalar=scalar)
         elif isinstance(action, actions.ActionableTransform):
-            self.performtransformonnewstate(statenode=newstate, action=action, scalar=scalar)
+            self.performtransformonnewstate(statenode=statenode, action=action, scalar=scalar)
         else:
             print("WARNING: performed null action on copied state")
-        return newstate
+        return statenode
 
     #Edits state with a transfer action
-    def performtransferonnewstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> None:
+    def performtransferonnewstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> StateNode:
         statenode.state[action.country1][action.template.resource1] = statenode.state[action.country1][action.template.resource1] - (action.template.resource1_amount * scalar)
-        statenode.state[action.country1][action.transfer_template.resource2] = statenode.state[action.country1][action.template.resource2] + (action.template.resource2_amount * scalar)
+        statenode.state[action.country1][action.template.resource2] = statenode.state[action.country1][action.template.resource2] + (action.template.resource2_amount * scalar)
         statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][action.template.resource2] - (action.template.resource2_amount * scalar)
-        statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][action.template.resource1] + (action.template.resource1_amount * scalar)
+        statenode.state[action.country2][action.template.resource1] = statenode.state[action.country2][action.template.resource1] + (action.template.resource1_amount * scalar)
+        return statenode
 
     #Edits state with a transfer action
-    def performtransformonnewstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> None:
-        for resource in self.transform_template.input_resources:
+    def performtransformonnewstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> StateNode:
+        for resource in action.template.input_resources:
             statenode.state[action.country][resource] = statenode.state[action.country][resource] - (action.template.input_resources[resource] * scalar)
-        for resource in self.transform_template.output_resources:
+        for resource in action.template.output_resources:
             statenode.state[action.country][resource] = statenode.state[action.country][resource] + (action.template.output_resources[resource] * scalar)
+            return statenode
 
-    #TODO: simplify this logic. 
-    def buildNewStateFromTransform(init_state: StateNode, transaction: actions.Action, scalar: int) -> StateNode:
+    #Function takes an init state and an action. If the action is valid on the state in the current context, it creates a new statenode with the new state after performing.
+    #Then, builds ALL new properties of the state (schedule, schedule likelihood, and expected utility), and returns the state.
+    #Returns none if the state was invalid
+    #TODO
+    def buildNewStateFromTransform(self, init_state: StateNode, transaction: actions.Action, scalar: int) -> StateNode or None:
         # #1. Check if action is valid (driver can do this too, might be better)
+        if not self.isvalidactionforstate(action=transaction, statenode=init_state, scalar=scalar):
+            return None
 
-        # #2. Perform action and grab new state
+        # #2. Copy state, perform action, generate a new persistable action for schedule and calculations, and get your discounted reward
+        newstate = copy.copy(init_state)
+        self.performactiononstate(action=transaction, statenode=newstate, scalar=scalar)
+        actionRecord = transaction.convertToPersistable(scalar)
+        newstate.schedule.append(actionRecord)
+        my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country, depth=len(newstate.schedule))
 
-        # #3. Calculate likelihood of new transaction, using discounted reward of second country * sigmoid if transfer and =1 if transform
-
-        # #4. Multiply transaction likelihood on new state  by new transaction likelihood
+        # #3. If action was a transfer, get the discounted reward of second country to get the action likelihood. Then, multiply by
+        # the newstate's current schedule_likelihood to get the new overall likelihood
+        if isinstance(transaction, actions.ActionableTransfer): #likelihood only changes when another country is involved
+            other_discountedreward = self.calc_discounted_reward(state=newstate, country=transaction.country2, depth=len(newstate.schedule)) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
+            action_likelihoood = self.calc_likelihood_from_reward(other_discountedreward)
+            newstate.schedule_likelihood = newstate.schedule_likelihood * action_likelihoood
 
         # #5. Use country1 discounted reward and likelihood to calc expected utility
+        newstate.expected_utility = newstate.schedule_likelihood * my_discountedreward
 
         # #Return!!
-        pass
+        return newstate
 
-    #Calculates overall discounted reward for a state & country. Needs state quality function and init reward passed in.
+    #Calculates overall discounted reward for a state & country. Uses state quality function result of newstate, depth, and init_utility.
     #Formula: 
-    def calc_discounted_reward(state: StateNode, country: str):
-        pass
+    def calc_discounted_reward(state: StateNode, country: str, depth: int)-> float:
+        pass #TODO: implement, possibly in another file
+
+    #Outputs [0, 1] likelihood of a country accepting a transaction based on discounted reward
+    def calc_likelihood_from_reward(self, discounted_reward: float) -> float:
+        pass #TODO: implement sigmoid generator, possibly in another file
 

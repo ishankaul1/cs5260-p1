@@ -20,6 +20,9 @@ class Action(ABC):
     def __init__(self, template):
         self.template = template
 
+    def convertToPersistable(self, scalar: int):
+        pass
+
 class PersistableAction(ABC):
     #just print out what's happening
     @abstractmethod
@@ -28,7 +31,7 @@ class PersistableAction(ABC):
 
 
 
-#These are actually to be stored in the schedule for a new state, after performing the action template and scalar on the state
+#These are actually to be stored in the schedule for a new state, after successfully performing the action template and scalar on the state
 class PersistableTransform(PersistableAction):
     #resources in {}
     def __init__(self, template: TransformTemplate,  country: str):
@@ -40,6 +43,10 @@ class PersistableTransform(PersistableAction):
         print("\tCountry: " + self.country)
         print("\tInput: {"  + ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]) + "}" )
         print("\tOutput: {"  + ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) + "}\n" )
+
+    def toString(self) -> str:
+        format_str = "TRANSFORM:\n\tCountry: {}\n\tInput: [{}]\n\tOutput: [{}]\n"
+        return format_str.format(self.country, ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]), ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) )
 
 class PersistableTransfer(PersistableAction):
     def __init__(self, template: TransferTemplate, country1: str, country2: str):
@@ -54,6 +61,11 @@ class PersistableTransfer(PersistableAction):
         print("\tCountry2: " + self.country2)
         print("\tResource2: {" + self.template.resource2 + ": " + str(self.template.resource2_amount) + "}\n")
 
+    def toString(self) -> str:
+        format_str = "TRANSFER:\n\tCountry1: {}, Resource1: {}, Amount1: {}\n\tCountry2: {}, Resource2: {}, Amount2: {}\n"
+        return format_str.format(self.country1, self.template.resource1, self.template.resource1_amount, self.country2, self.template.resource2, self.template.resource2_amount)
+
+
 
 #These are created at the very start of the program, one for each transform template. These are to be used to determine whether a transform is possible on a state, and to actually make the transform on the state.
 class ActionableTransform(Action):
@@ -63,7 +75,13 @@ class ActionableTransform(Action):
         self.country = country
 
     def convertToPersistable(self, scalar: int):
-        pass #TODO
+        newinputresources = {}
+        newoutputresources = {}
+        for resource in self.template.input_resources:
+            newinputresources[resource] = self.template.input_resources[resource] * scalar
+        for resource in self.template.output_resources:
+            newoutputresources[resource] = self.template.output_resources[resource] * scalar
+        return PersistableTransform(template=TransformTemplate(input_resources=newinputresources, output_resources=newoutputresources), country=self.country)
 
 #These are created at the very start of the program, one for each transfer template * country (country1 is always your own country). These are to be used to determine whether a transfer is possible on a state, and to actually make the transfer on the state.
 class ActionableTransfer(Action):
@@ -74,16 +92,3 @@ class ActionableTransfer(Action):
         
     def convertToPersistable(self, scalar: int) -> PersistableTransfer:
         return PersistableTransfer(TransferTemplate(self.template.resource1, self.template.resource1_amount * scalar, self.template.resource2, self.template.resource2_amount * scalar), self.country1, self.country2)
-
-#Move the damn tests lol
-# def persistableTransformPrintTest():
-#     p = Persistable_Transform(transform_template=Transform_Template(input_resources={'r1': 4, 'r2': 8}, output_resources={'r3': 3}), country='Poopadovia')
-#     p.debug()
-    
-# def persistableTransferPrintTest():
-#     a = ActionableTransfer(template=TransferTemplate('poopsticks', 5, 'cheeseballs', 3), country1='Pooplantis', country2="Swagamerica")
-#     p = a.convertToPersistable(3)
-#     p.debug()
-#
-# # persistableTransformPrintTest()
-# persistableTransferPrintTest()
