@@ -1,29 +1,4 @@
-#Module to hold all logic for representing and generating states, as well as doing calculations around states.
-
-#Key variables:
-#   state: DICT - representation of current world
-#   schedule: array[Actions] - The schedule of actions up to this point
-#   likelihood: float (0, 1) - Calculated likelihood of reaching this point
-#   utility: (could just be a function?) - Expected utility calculated based on depth, likelihood, and state utility.
-#   state_quality_function: function(input: state, country) - Passed in from the top scheduler program, which can use to use any state quality function it desires. Outputs raw state quality for that country based on the state.
-#   init_qualities: DICT - quality of the initial state of each country for comparison & calculation of discounted reward
-#Pass in: - on second thought, let state generator and scheduler handle this
-#   prev_likelihood
-#   state
-#   schedule
-#   state_quality_function
-#Key functions
-#   get_depth(): length of schedule
-#   get_schedule(): returns the schedule
-#   get_state(): returns the state
-#   get_init_quality(input: (string) country): return the init state quality of the country
-#   calc_state_quality(input: (string) country): calculates the raw state quality based on the node's state and state quality function, for the input country in question.
-#   calc_undiscounted_reward(input: (string) country): subtracts results of calc_state_quality from initial state quality for the country in question
-#   calc_discounted_reward(input: (string) country): multiplies results of calc_state_quality with a multiplier based on the depth of the schedule, then subtracts from the initial state quality for the country
-#   calc_country_likelihood(input: (string) country, prev_discounted_reward: float): uses discounted reward for a country at this state and subtracts from that of the last to calculate how likely the country is to accept the proposal. Can pass in a function used to calculate to the state object. This should be used only on the receiving country of a transform to feed into calculation of the new likelihood.
-#   calc_total_likelihood(): gives the final likelihood of this state. Multiplies init likelihood with likelihood of the new transaction
-#   calc_expected_utility(): calculates expected utility based on total likelihood and discounted reward
-#   get_utility(): return the calculated utility
+#Module to hold all logic for representing and generating states, as well as doing calculations around state generation.
 
 from functools import total_ordering
 from typing import Callable
@@ -31,6 +6,7 @@ import copy
 import actions
 #rom actions import Actionable_Transfer, Actionable_Transform
 import actions
+import sigmoid_activation
 
 #Just use to hold and get information about the state that needs to be memoized
 @total_ordering
@@ -57,7 +33,13 @@ class StateNode:
 class StateGenerator:
     #Initial state - state of the world at the very beginning. Used to calculate initial state qualities for later discounted reward calculation.
     #State quality function - takes in a dict of {resouce: value} mappings for ONE country, and outputs an int that represents the quality of the state for that country.
-    def __init__(self, my_country: str, init_state: dict, state_quality_function: callable()):
+    def __init__(self, my_country: str, init_state: dict, state_quality_function: callable(), gamma: float, k: float):
+        #TODO for pure cleanliness purposes: move my_country, (maybe?) init_state, state_quality_function, k and gamma into a calculation_context object
+        #Could generate k from state qual function ouput range
+        if gamma < 0 or gamma > 1:
+            raise Exception('Gamma must be between 0 and 1')
+        self.gamma = gamma
+        self.k = k
         self.my_country = my_country
         self.state_quality_function = state_quality_function
         #For all state generation, we need to have access to the INITIAL utility of each country, so that we can determine
@@ -133,12 +115,12 @@ class StateGenerator:
         self.performactiononstate(action=transaction, statenode=newstate, scalar=scalar)
         actionRecord = transaction.convertToPersistable(scalar)
         newstate.schedule.append(actionRecord)
-        my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country, depth=len(newstate.schedule))
+        my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country)
 
         # #3. If action was a transfer, get the discounted reward of second country to get the action likelihood. Then, multiply by
         # the newstate's current schedule_likelihood to get the new overall likelihood
         if isinstance(transaction, actions.ActionableTransfer): #likelihood only changes when another country is involved
-            other_discountedreward = self.calc_discounted_reward(state=newstate, country=transaction.country2, depth=len(newstate.schedule)) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
+            other_discountedreward = self.calc_discounted_reward(state=newstate, country=transaction.country2) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
             action_likelihoood = self.calc_likelihood_from_reward(other_discountedreward)
             newstate.schedule_likelihood = newstate.schedule_likelihood * action_likelihoood
 
@@ -149,11 +131,16 @@ class StateGenerator:
         return newstate
 
     #Calculates overall discounted reward for a state & country. Uses state quality function result of newstate, depth, and init_utility.
-    #Formula: 
-    def calc_discounted_reward(state: StateNode, country: str, depth: int)-> float:
-        pass #TODO: implement, possibly in another file
+    #Formula:
+    def calc_discounted_reward(self, state: StateNode, country: str) -> float:
+        init_utility = self.init_utilities[country]
+        depth = len(state.schedule)
+        current_utility = self.state_quality_function(state.state[country])
+        discount_factor = self.gamma ** depth
+        discounted_utility = current_utility * discount_factor
+        return discounted_utility - init_utility
 
     #Outputs [0, 1] likelihood of a country accepting a transaction based on discounted reward
     def calc_likelihood_from_reward(self, discounted_reward: float) -> float:
-        pass #TODO: implement sigmoid generator, possibly in another file
+        return sigmoid_activation.sig(discounted_reward, self.k)
 
