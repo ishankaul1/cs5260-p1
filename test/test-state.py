@@ -6,8 +6,9 @@ sys.path.append('../src')
 
 import state as st
 import actions as actions
+import state_quality
 
-#USAGE: self.assertTrue(self.statenode.state['X1']['water'] == 4)
+#USAGE: python -m unittest test-state.py
 
 class TestState(unittest.TestCase):
     def setUp(self) -> None:
@@ -15,8 +16,8 @@ class TestState(unittest.TestCase):
                   'X2': {'water': 3, 'earth': 5, 'fire': 3},
                   'X3': {'water': 8, 'earth': 7, 'fire': 6}
                   }
-        self.statenode = st.StateNode(state=state, schedule=[], schedule_likelihood=1, expected_utility=5)
-        self.stategenerator = st.StateGenerator()
+        self.statenode = st.StateNode(state=state, schedule=[], schedule_likelihood=1, expected_utility=0)
+        self.stategenerator = st.StateGenerator(my_country='X1', init_state= state, state_quality_function = state_quality.state_quality_basic, gamma = 0.99, k=0.3)
     def resetStateNode(self):
         self.statenode.state = {'X1': {'water': 4},
                   'X2': {'earth': 5},
@@ -34,7 +35,7 @@ class TestState(unittest.TestCase):
                   }
         statenode2 = st.StateNode(state=state2, schedule=[], schedule_likelihood=1, expected_utility=6)
         self.assertTrue(statenode2 > self.statenode)
-        statenode2.expected_utility = 5
+        statenode2.expected_utility = 0
         self.assertTrue(statenode2 == self.statenode)
 
     #Ensures that shallow copy produces a new statenode where edits to the new state and schedule do not affect that of the old
@@ -55,7 +56,7 @@ class TestState(unittest.TestCase):
         self.assertTrue(self.statenode.schedule_likelihood == 1)
         self.assertTrue(statenode2.schedule_likelihood == .5)
         #Subtest - expected utility
-        self.assertTrue(self.statenode.expected_utility == 5)
+        self.assertTrue(self.statenode.expected_utility == 0)
         self.assertTrue(statenode2.expected_utility == 10)
 
     #Call these at the beginning of action-state tests
@@ -98,7 +99,6 @@ class TestState(unittest.TestCase):
 
     def test_performtransfer(self):
         goodtransfer = self.createGoodBadTransfers()[0]
-        print(self.statenode.state)
         self.stategenerator.performtransferonnewstate(goodtransfer, self.statenode, 1)
 
         self.assertTrue(self.statenode.state['X3']['water'] == 3)
@@ -110,6 +110,30 @@ class TestState(unittest.TestCase):
         self.assertTrue(self.statenode.state['X1']['fire'] == 2) #unchanged
 
         self.resetStateNode()
+
+    def test_buildStateFromAction(self):
+        transfer = self.createGoodBadTransfers()[0]
+        transform = self.createGoodBadTransforms()[0]
+        print('INIT UTILITIES:')
+        print(self.stategenerator.init_utilities)
+        print('\nINITIAL STATE:')
+        self.statenode.debug()
+
+        postTransferState = self.stategenerator.buildNewStateFromAction(init_state=self.statenode, transaction=transfer, scalar=1 )
+        print('\nNEW STATE AFTER TRANSFER:')
+        postTransferState.debug()
+        self.assertEqual(len(postTransferState.schedule), 1)
+        self.assertTrue(0 < postTransferState.schedule_likelihood < 1)
+
+        postTransformState = self.stategenerator.buildNewStateFromAction(init_state=self.statenode, transaction=transform,
+                                                                        scalar=1)
+        print('\nNEW STATE AFTER TRANSFORM:')
+        postTransformState.debug()
+        self.assertEqual(len(postTransformState.schedule), 1)
+        self.assertEqual(postTransformState.schedule_likelihood, 1)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()
