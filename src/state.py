@@ -11,7 +11,7 @@ import sigmoid_activation
 #Just use to hold and get information about the state that needs to be memoized
 @total_ordering
 class StateNode:
-    def __init__(self, state: dict, schedule: list, schedule_likelihood: float, expected_utility: float):
+    def __init__(self, state: dict, schedule: list[actions.PersistableAction], schedule_likelihood: float, expected_utility: float):
         self.state = state
         self.schedule = schedule
         self.schedule_likelihood = schedule_likelihood
@@ -28,12 +28,28 @@ class StateNode:
     def __copy__(self):
         return StateNode(state=copy.deepcopy(self.state), schedule=copy.copy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
 
+    def toScheduleString(self):
+        scheduleStr = ""
+        for x in self.schedule:
+            scheduleStr = scheduleStr + x.toString() + ', '
+
+        return scheduleStr[:-2]
+
+    def debug(self):
+        print('State:')
+        print(self.state)
+        print('\nschedule:')
+        print(self.toScheduleString())
+        print('\nlikelihood: ' + str(self.schedule_likelihood))
+        print('\nexpected_utility: ' + str(self.expected_utility))
+
+
 #All functionality for creating a new state node from a state and transaction
 #Is a static, one-use object
 class StateGenerator:
     #Initial state - state of the world at the very beginning. Used to calculate initial state qualities for later discounted reward calculation.
     #State quality function - takes in a dict of {resouce: value} mappings for ONE country, and outputs an int that represents the quality of the state for that country.
-    def __init__(self, my_country: str, init_state: dict, state_quality_function: callable(), gamma: float, k: float):
+    def __init__(self, my_country: str, init_state: dict, state_quality_function, gamma: float, k: float):
         #TODO for pure cleanliness purposes: move my_country, (maybe?) init_state, state_quality_function, k and gamma into a calculation_context object
         #Could generate k from state qual function ouput range
         if gamma < 0 or gamma > 1:
@@ -105,7 +121,7 @@ class StateGenerator:
     #Then, builds ALL new properties of the state (schedule, schedule likelihood, and expected utility), and returns the state.
     #Returns none if the state was invalid
     #TODO
-    def buildNewStateFromTransform(self, init_state: StateNode, transaction: actions.Action, scalar: int) -> StateNode or None:
+    def buildNewStateFromAction(self, init_state: StateNode, transaction: actions.Action, scalar: int) -> StateNode or None:
         # #1. Check if action is valid (driver can do this too, might be better)
         if not self.isvalidactionforstate(action=transaction, statenode=init_state, scalar=scalar):
             return None

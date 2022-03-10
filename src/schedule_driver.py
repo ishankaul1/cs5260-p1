@@ -3,21 +3,25 @@ import resource
 import sys
 from os import path
 import csv
-from tokenize import String
+import json
+import copy
+
+import actions
 
 
-def err(msg: String):
+def err(msg: str):
     print('ERROR: ' + msg)
     sys.exit(1)
 
-usage = "driver.py <initial state filepath> <resource weight filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size>"
+usage = "driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size>"
+#easy test: python3 schedule_driver.py ../input-states/test_state_1.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json pp.pp X1 3 3 3
 
-if len(sys.argv) != 8:
+if len(sys.argv) != 9:
     print(usage)
     sys.exit(1)
 
-state_filename, resources_filename, output_filename, my_country = sys.argv[1:5]
-max_depth, num_output_schedules, max_frontier_size = [int(x) for x in sys.argv[5:]]
+state_filename, resources_filename, transforms_filename, output_filename, my_country = sys.argv[1:6]
+max_depth, num_output_schedules, max_frontier_size = [int(x) for x in sys.argv[6:]]
 
 #sanity check the ints
 if max_depth < 1:
@@ -33,20 +37,24 @@ if max_frontier_size < 1:
 #sanity check the filepaths
 if not path.isfile(state_filename):
     err("INIT STATE file '" + state_filename + "' does not exist")
-    
 elif not len(state_filename) > 4 and state_filename[-4:] == '.csv':
     err("INIT STATE file '" + state_filename + "' is not a csv")
 
 
 if not path.isfile(resources_filename):
     err("RESOURCE file '" + resources_filename + "' does not exist")
-    
 elif not len(resources_filename) > 4 and resources_filename[-4:] == '.csv':
-    err("INIT STATE file '" + resources_filename + "' is not a csv")
+    err("RESOURCE file '" + resources_filename + "' is not a csv")
+
+if not path.isfile(transforms_filename):
+    err("RESOURCE file '" + transforms_filename + "' does not exist")
+elif not len(resources_filename) > 5 and resources_filename[-5:] == '.json':
+    err("TRANSFORMS file '" + transforms_filename + "' is not a csv")
     
 
 resources_file = open(resources_filename)
 state_file = open(state_filename)
+transforms_file = open(transforms_filename)
 
 #parse resources and init state
 #resources: DICT {key='resource_name', val=(int)'weight'}
@@ -97,9 +105,7 @@ print(resources_header)
 if (set(state_header[1:]) != set(resources_header)):
     err('Please ensure resources in resources file "' + resources_filename + '" and state file "' + state_filename + '" match.')
 
-
-
-#build state dict: TODO
+#build state dict:
 for row in state_rows:
     country = row[0].strip()
     init_state[country] = {}
@@ -111,11 +117,36 @@ for row in state_rows:
          
 
 #sanity check - country name exists in state structure
+all_countries = set(init_state.keys())
 if my_country not in init_state:
     err('Please ensure ' + my_country + ' is included in the state file ' + state_filename)
 
 print('\n\n')
 print(init_state)
+
+#build transforms from inputs
+transforms_data = json.load(transforms_file)
+raw_transforms = transforms_data['transforms']
+all_transformtemplates = actions.build_transformtemplates_from_rawtransforms(raw_transforms)
+#only doing transforms for your own country
+all_actionabletransforms = []
+for template in all_transformtemplates:
+    all_actionabletransforms.append(actions.ActionableTransform(country=my_country, template=template))
+
+
+#build transfers from resource weights
+all_transfertemplates = actions.build_transfertemplates_from_resourceweights(resources)
+all_actionabletransfers = []
+#country1 is always my_country, country2 can be any country
+other_countries = all_countries.copy()
+other_countries.remove(my_country)
+for template in all_transfertemplates:
+    for other_country in other_countries:
+        all_actionabletransfers.append(actions.ActionableTransfer(template=template, country1=my_country, country2=other_country))
+
+print(len(all_actionabletransforms))
+print(len(all_actionabletransfers))
+
 
 #initialize and run scheduler
 print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')

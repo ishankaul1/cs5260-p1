@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 def sig(x: float, k: float):
     return 1/(1 + np.exp(-(k * x)))
 
-rng = np.linspace(-50, 50, 50, True)
-k = 0.3
-plt.plot([x for x in rng], [sig(x, k) for x in rng])
-plt.show()
+# rng = np.linspace(-50, 50, 50, True)
+# k = 0.3
+# plt.plot([x for x in rng], [sig(x, k) for x in rng])
+# plt.show()

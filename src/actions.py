@@ -1,3 +1,4 @@
+from math import gcd
 from abc import ABC, abstractmethod
 
 
@@ -15,6 +16,38 @@ class TransferTemplate:
         self.resource2 = resource2
         self.resource2_amount = resource2_amount
 
+#outputs all possible transfer combinations given a dict of resource weights,
+def build_transfertemplates_from_resourceweights(resourceweights: dict):
+    all_transfertemplates = []
+    resoucelist = list(resourceweights.keys())
+    for i in range(len(resoucelist)):
+        for j in range(i+1, len(resoucelist)):
+            resource1 = resoucelist[i]
+            resource2 = resoucelist[j]
+            weight1 = resourceweights[resource1]
+            print(weight1)
+            weight2 = resourceweights[resource2]
+            print(weight2)
+            #reduce
+            weightgcd = gcd(weight1, weight2)
+            if weightgcd != 1:
+                weight1 = weight1 / weightgcd
+                weight2 = weight2 / weightgcd
+            all_transfertemplates.append(TransferTemplate(resource1=resource1, resource1_amount=weight1, resource2=resource2, resource2_amount=weight2))
+            all_transfertemplates.append(TransferTemplate(resource1=resource2, resource1_amount=weight2, resource2=resource1, resource2_amount=weight1))
+
+    return all_transfertemplates
+
+def build_transformtemplates_from_rawtransforms(rawtransforms: list[dict]):
+    all_transformtemplates = []
+    for t in rawtransforms:
+        all_transformtemplates.append(TransformTemplate(input_resources=t['inputs'], output_resources=t['outputs']))
+
+    return all_transformtemplates
+
+
+
+
 #base class for actions
 class Action(ABC):
     def __init__(self, template):
@@ -27,6 +60,8 @@ class PersistableAction(ABC):
     #just print out what's happening
     @abstractmethod
     def debug(self):
+        pass
+    def toString(self)-> str:
         pass
 
 
