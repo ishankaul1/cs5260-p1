@@ -12,4 +12,4 @@ def printScheduleUtilityPair(schedule: list[actions.PersistableAction], utility:
 
 def printAllResults(results: list):
     for r in results:
-        printScheduleUtilityPair(r)
+        printScheduleUtilityPair(r[0], r[1])

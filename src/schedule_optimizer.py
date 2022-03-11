@@ -24,9 +24,11 @@ class Schedule_Optimizer:
 
     def findschedules(self) -> list: #list of schedules & utilities; i never made a data type for it (hehe)
         while len(self.frontier) > 0:
+            #print('FRONTIERLEN: {}', str(len(self.frontier))) #debug
             curstatenode = self.frontier.popfirst()[0]
+            #curstatenode.debug() #debug
             #save to best outputs if top n haven't been found, or if better than the worst so far
-            if len(self.best_states) < self.num_outputs or curstatenode.expected_utility > self.best_outputs.low():
+            if len(self.best_states) < self.num_outputs or curstatenode.expected_utility > self.best_states.low():
                 self.best_states.insert(curstatenode, curstatenode.expected_utility)
             self.generatesuccessors(curstatenode) #implement
 
@@ -39,9 +41,14 @@ class Schedule_Optimizer:
         #try every transform, and try to scale each up. Break out of the scaling loop if isValid is false
         for transform in self.actionable_transforms:
             scalar = 1
+
+
             while self.state_generator.isvalidactionforstate(action=transform, statenode=statenode, scalar=scalar):
+                #print(self.state_generator.isvalidactionforstate(action=transform, statenode=statenode, scalar=scalar))
                 #idea: totally prune right here if state is not better than the worst of the frontier. saves tons of memory but may get stuck in small areas of search space
-                newstate = self.state_generator.performactiononstate(action=transform, statenode=statenode, scalar=scalar)
+                newstate = self.state_generator.buildNewStateFromAction(transaction=transform, init_state=statenode, scalar=scalar)
+                if (len(newstate.schedule) > 0):
+                    print('plz')
                 if len(newstate.schedule) <= self.max_depth: #cut search at max depth
                     self.frontier.insert(newstate, newstate.expected_utility)
                     successors.append(newstate)
@@ -49,17 +56,17 @@ class Schedule_Optimizer:
                     del newstate
                 scalar = scalar + 1
 
-        for transfer in self.actionable_transfers:
-            scalar = 1
-            while self.state_generator.isvalidactionforstate(action=transfer, statenode=statenode, scalar=scalar):
-                #idea: totally prune right here if state is not better than the worst of the frontier. saves tons of memory but may get stuck in small areas of search space
-                newstate = self.state_generator.performactiononstate(action=transfer, statenode=statenode, scalar=scalar)
-                if len(newstate.schedule) <= self.max_depth:
-                    self.frontier.insert(newstate, newstate.expected_utility)
-                    successors.append(newstate)
-                else:
-                    del newstate
-                scalar = scalar + 1
+        # for transfer in self.actionable_transfers:
+        #     scalar = 1
+        #     while self.state_generator.isvalidactionforstate(action=transfer, statenode=statenode, scalar=scalar):
+        #         #idea: totally prune right here if state is not better than the worst of the frontier. saves tons of memory but may get stuck in small areas of search space
+        #         newstate = self.state_generator.performactiononstate(action=transfer, statenode=statenode, scalar=scalar)
+        #         if len(newstate.schedule) <= self.max_depth:
+        #             self.frontier.insert(newstate, newstate.expected_utility)
+        #             successors.append(newstate)
+        #         else:
+        #             del newstate
+        #         scalar = scalar + 1
         #TODO: ^extract above into a generalized function, so we can play around with frontier insertion
         return successors
 

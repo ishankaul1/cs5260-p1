@@ -25,9 +25,9 @@ def build_transfertemplates_from_resourceweights(resourceweights: dict):
             resource1 = resoucelist[i]
             resource2 = resoucelist[j]
             weight1 = resourceweights[resource1]
-            print(weight1)
+            #print(weight1)
             weight2 = resourceweights[resource2]
-            print(weight2)
+            #print(weight2)
             #reduce
             weightgcd = gcd(weight1, weight2)
             if weightgcd != 1:

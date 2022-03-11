@@ -123,8 +123,8 @@ all_countries = set(init_state.keys())
 if my_country not in init_state:
     err('Please ensure ' + my_country + ' is included in the state file ' + state_filename)
 
-print('\n\n')
-print(init_state)
+#print('\n\n')
+#print(init_state)
 
 #build transforms from inputs
 transforms_data = json.load(transforms_file)
@@ -153,6 +153,6 @@ print(len(all_actionabletransfers))
 #initialize and run scheduler
 print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
 
-optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransfers, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_basic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
+optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_basic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
 results = optimizer.findschedules()
 solution_printer.printAllResults(results)

@@ -26,7 +26,7 @@ class StateNode:
 
     #safely copy state st operations on the new copy will not affect the old state
     def __copy__(self):
-        return StateNode(state=copy.deepcopy(self.state), schedule=copy.copy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
+        return StateNode(state=copy.deepcopy(self.state), schedule=copy.deepcopy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
 
     def toScheduleString(self):
         scheduleStr = ""
@@ -125,12 +125,14 @@ class StateGenerator:
         # #1. Check if action is valid (driver can do this too, might be better)
         if not self.isvalidactionforstate(action=transaction, statenode=init_state, scalar=scalar):
             return None
+        print('do we weven get here')
 
         # #2. Copy state, perform action, generate a new persistable action for schedule and calculations, and get your discounted reward
         newstate = copy.copy(init_state)
         self.performactiononstate(action=transaction, statenode=newstate, scalar=scalar)
         actionRecord = transaction.convertToPersistable(scalar)
         newstate.schedule.append(actionRecord)
+        print(len(newstate.schedule))
         my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country)
 
         # #3. If action was a transfer, get the discounted reward of second country to get the action likelihood. Then, multiply by
