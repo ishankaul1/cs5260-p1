@@ -1,5 +1,6 @@
 import actions
 import state
+
 from depq import DEPQ
 
 class Schedule_Optimizer:
@@ -13,7 +14,7 @@ class Schedule_Optimizer:
         self.max_depth = max_depth
         self.max_frontier = max_frontier
         self.num_outputs = num_outputs
-        self.state_generator = state.StateGenerator(my_country=my_country, init_state=init_state, k=likelihood_param, gamma=depth_penalty)
+        self.state_generator = state.StateGenerator(my_country=my_country, init_state=init_state, state_quality_function=state_quality_fn, k=likelihood_param, gamma=depth_penalty)
 
         #stuff needed to start optimizing
         init_statenode = state.StateNode(state=init_state, schedule=[], schedule_likelihood=1, expected_utility=0)
@@ -30,17 +31,42 @@ class Schedule_Optimizer:
             self.generatesuccessors(curstatenode) #implement
 
         #loop done; convert best_output states into schedules
-        return self.convertbeststatestoschedules()
+        return self.extractschedulesfrombeststates()
 
     #really just adds directly to frontier (memory concerns) but I'll return them because ~clean code~
     def generatesuccessors(self, statenode: state.StateNode) -> list[state.StateNode]:
-        #TODO
-        pass
+        successors: list[state.StateNode] = []
+        #try every transform, and try to scale each up. Break out of the scaling loop if isValid is false
+        for transform in self.actionable_transforms:
+            scalar = 1
+            while self.state_generator.isvalidactionforstate(action=transform, statenode=statenode, scalar=scalar):
+                #idea: totally prune right here if state is not better than the worst of the frontier. saves tons of memory but may get stuck in small areas of search space
+                newstate = self.state_generator.performactiononstate(action=transform, statenode=statenode, scalar=scalar)
+                if len(newstate.schedule) <= self.max_depth: #cut search at max depth
+                    self.frontier.insert(newstate, newstate.expected_utility)
+                    successors.append(newstate)
+                else:
+                    del newstate
+                scalar = scalar + 1
 
-    def convertbeststatestoschedules(self) -> list:
+        for transfer in self.actionable_transfers:
+            scalar = 1
+            while self.state_generator.isvalidactionforstate(action=transfer, statenode=statenode, scalar=scalar):
+                #idea: totally prune right here if state is not better than the worst of the frontier. saves tons of memory but may get stuck in small areas of search space
+                newstate = self.state_generator.performactiononstate(action=transfer, statenode=statenode, scalar=scalar)
+                if len(newstate.schedule) <= self.max_depth:
+                    self.frontier.insert(newstate, newstate.expected_utility)
+                    successors.append(newstate)
+                else:
+                    del newstate
+                scalar = scalar + 1
+        #TODO: ^extract above into a generalized function, so we can play around with frontier insertion
+        return successors
+
+    def extractschedulesfrombeststates(self) -> list:
         schedules = []
         for stateutilitypair in self.best_states:
-            schedules.append((stateutilitypair[0].schedule, stateutilitypair[1])) #so digusting, I know
+            schedules.append((stateutilitypair[0].schedule, stateutilitypair[1]))
 
         return schedules
 

@@ -6,15 +6,17 @@ import csv
 import json
 import copy
 
+import solution_printer
 import actions
-
+import schedule_optimizer
+import state_quality
 
 def err(msg: str):
     print('ERROR: ' + msg)
     sys.exit(1)
 
 usage = "driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size>"
-#easy test: python3 schedule_driver.py ../input-states/test_state_1.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json pp.pp X1 3 3 3
+#easy test: python3 schedule_driver.py ../input-states/test_state_1.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json pp.pp X1 3 10 30
 
 if len(sys.argv) != 9:
     print(usage)
@@ -150,3 +152,7 @@ print(len(all_actionabletransfers))
 
 #initialize and run scheduler
 print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
+
+optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransfers, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_basic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
+results = optimizer.findschedules()
+solution_printer.printAllResults(results)

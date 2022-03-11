@@ -74,13 +74,13 @@ class PersistableTransform(PersistableAction):
         self.country = country
         
     def debug(self):
-        print("TRANSFORM: ")
-        print("\tCountry: " + self.country)
-        print("\tInput: {"  + ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]) + "}" )
-        print("\tOutput: {"  + ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) + "}\n" )
+        print("\t\tTRANSFORM: ")
+        print("\t\t\tCountry: " + self.country)
+        print("\t\t\tInput: {"  + ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]) + "}" )
+        print("\t\t\tOutput: {"  + ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) + "}\n" )
 
     def toString(self) -> str:
-        format_str = "TRANSFORM:\n\tCountry: {}\n\tInput: [{}]\n\tOutput: [{}]\n"
+        format_str = "\t\tTRANSFORM:\n\t\t\tCountry: {}\n\t\t\tInput: [{}]\n\t\t\tOutput: [{}]\n"
         return format_str.format(self.country, ','.join([resource + ': ' + str(self.template.input_resources[resource]) for resource in self.template.input_resources]), ','.join([resource + ': ' + str(self.template.output_resources[resource]) for resource in self.template.output_resources]) )
 
 class PersistableTransfer(PersistableAction):
@@ -97,7 +97,7 @@ class PersistableTransfer(PersistableAction):
         print("\tResource2: {" + self.template.resource2 + ": " + str(self.template.resource2_amount) + "}\n")
 
     def toString(self) -> str:
-        format_str = "TRANSFER:\n\tCountry1: {}, Resource1: {}, Amount1: {}\n\tCountry2: {}, Resource2: {}, Amount2: {}\n"
+        format_str = "\t\tTRANSFER:\n\t\t\tCountry1: {}, Resource1: {}, Amount1: {}\n\t\t\tCountry2: {}, Resource2: {}, Amount2: {}\n"
         return format_str.format(self.country1, self.template.resource1, self.template.resource1_amount, self.country2, self.template.resource2, self.template.resource2_amount)
 
 
