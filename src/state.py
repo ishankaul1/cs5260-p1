@@ -73,6 +73,7 @@ class StateGenerator:
     # #Logic for validating a single action against a state
     def isvalidactionforstate(self, action: actions.Action, statenode: StateNode, scalar: int) -> bool:
         if isinstance(action, actions.ActionableTransfer):
+            #print('recognizing transfers')
             return self.isvalidtransferforstate(action, statenode, scalar)
         elif isinstance(action, actions.ActionableTransform):
             return self.isvalidtransformforstate(action, statenode, scalar)
@@ -80,8 +81,32 @@ class StateGenerator:
 
     def isvalidtransferforstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> bool:
         # #TODO: add resource validation
-        if (action.template.resource1_amount * scalar) > statenode.state[action.country1][action.template.resource1] or (action.template.resource2_amount * scalar) > statenode.state[action.country1][action.template.resource2]:
-            return False
+        # print('scalar: ', str(scalar))
+        # #print(action.template.resource1_amount)
+        # print(action.template.resource2_amount)
+        # print('Resource1:\n\tcurrent: ', str(statenode.state[action.country1][action.template.resource1]), ', required: ', str(action.template.resource1_amount * scalar))
+        # print('Resource2:\n\tcurrent: ', str(statenode.state[action.country2][action.template.resource2]),
+        #       ', required: ', str(action.template.resource2_amount * scalar))
+        # if (action.template.resource1_amount * scalar) > statenode.state[action.country1][action.template.resource1] or (action.template.resource2_amount * scalar) > statenode.state[action.country2][action.template.resource2]:
+        #     return False
+        if action.template.resource1_amount > 0:
+            #resource1 positive - country 1 needs enough of this resource
+            if (action.template.resource1_amount * scalar) > statenode.state[action.country1][action.template.resource1]:
+                return False
+        else:
+            #resource1 negative - country2 needs enough of this resource
+            if abs(action.template.resource1_amount) * scalar > statenode.state[action.country2][action.template.resource1]:
+                return False
+
+        if action.template.resource2_amount > 0:
+            # resource2 positive - country 2 needs enough of this resource
+            if (action.template.resource2_amount * scalar) > statenode.state[action.country2][action.template.resource2]:
+                return False
+        else:
+            # resource2 negative - country1 needs enough of this resource
+            if abs(action.template.resource2_amount) * scalar > statenode.state[action.country1][action.template.resource2]:
+                return False
+
         return True
 
     def isvalidtransformforstate(self, action: actions.ActionableTransform, statenode: StateNode, scalar: int) -> bool:
@@ -103,10 +128,32 @@ class StateGenerator:
 
     #Edits state with a transfer action
     def performtransferonnewstate(self, action: actions.ActionableTransfer, statenode: StateNode, scalar: int) -> StateNode:
-        statenode.state[action.country1][action.template.resource1] = statenode.state[action.country1][action.template.resource1] - (action.template.resource1_amount * scalar)
-        statenode.state[action.country1][action.template.resource2] = statenode.state[action.country1][action.template.resource2] + (action.template.resource2_amount * scalar)
-        statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][action.template.resource2] - (action.template.resource2_amount * scalar)
-        statenode.state[action.country2][action.template.resource1] = statenode.state[action.country2][action.template.resource1] + (action.template.resource1_amount * scalar)
+        if action.template.resource1_amount > 0:
+            #resource1 positive - country 1 gives away this resource to country 2
+            statenode.state[action.country1][action.template.resource1] = statenode.state[action.country1][action.template.resource1] - (action.template.resource1_amount * scalar)
+            statenode.state[action.country2][action.template.resource1] = statenode.state[action.country2][
+                                                                              action.template.resource1] + (
+                                                                                      action.template.resource1_amount * scalar)
+        else:
+            #resource1 negative - country2 gives away this resource to country1
+            statenode.state[action.country2][action.template.resource1] = statenode.state[action.country2][action.template.resource1] - (abs(action.template.resource1_amount) * scalar)
+            statenode.state[action.country1][action.template.resource1] = statenode.state[action.country1][
+                                                                              action.template.resource1] + (
+                                                                                      abs(action.template.resource1_amount) * scalar)
+        if action.template.resource2_amount > 0:
+            # resource2 positive - country 2 give away this resource to country1
+            statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][
+                                                                              action.template.resource2] - (
+                                                                                      action.template.resource2_amount * scalar)
+            statenode.state[action.country1][action.template.resource2] = statenode.state[action.country1][
+                                                                              action.template.resource2] + (
+                                                                                      action.template.resource2_amount * scalar)
+        else:
+            # resource2 negative - country1 gives away this resource to country2
+            statenode.state[action.country1][action.template.resource2] = statenode.state[action.country1][action.template.resource2] - (abs(action.template.resource2_amount) * scalar)
+            statenode.state[action.country2][action.template.resource2] = statenode.state[action.country2][
+                                                                              action.template.resource2] + (
+                                                                                      abs(action.template.resource2_amount) * scalar)
         return statenode
 
     #Edits state with a transfer action
@@ -125,19 +172,20 @@ class StateGenerator:
         # #1. Check if action is valid (driver can do this too, might be better)
         if not self.isvalidactionforstate(action=transaction, statenode=init_state, scalar=scalar):
             return None
-        print('do we weven get here')
+        #print('do we weven get here')
 
         # #2. Copy state, perform action, generate a new persistable action for schedule and calculations, and get your discounted reward
         newstate = copy.copy(init_state)
         self.performactiononstate(action=transaction, statenode=newstate, scalar=scalar)
         actionRecord = transaction.convertToPersistable(scalar)
         newstate.schedule.append(actionRecord)
-        print(len(newstate.schedule))
+        #print(len(newstate.schedule))
         my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country)
 
         # #3. If action was a transfer, get the discounted reward of second country to get the action likelihood. Then, multiply by
         # the newstate's current schedule_likelihood to get the new overall likelihood
         if isinstance(transaction, actions.ActionableTransfer): #likelihood only changes when another country is involved
+            #print("we're stuck in the transfer loop")
             other_discountedreward = self.calc_discounted_reward(state=newstate, country=transaction.country2) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
             action_likelihoood = self.calc_likelihood_from_reward(other_discountedreward)
             newstate.schedule_likelihood = newstate.schedule_likelihood * action_likelihoood

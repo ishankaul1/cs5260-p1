@@ -138,6 +138,7 @@ for template in all_transformtemplates:
 
 #build transfers from resource weights
 all_transfertemplates = actions.build_transfertemplates_from_resourceweights(resources)
+#sys.exit(1) #TODO: remove
 all_actionabletransfers = []
 #country1 is always my_country, country2 can be any country
 other_countries = all_countries.copy()
@@ -145,6 +146,12 @@ other_countries.remove(my_country)
 for template in all_transfertemplates:
     for other_country in other_countries:
         all_actionabletransfers.append(actions.ActionableTransfer(template=template, country1=my_country, country2=other_country))
+
+# for t in all_actionabletransfers:
+#     p = t.convertToPersistable(1)
+#     p.debug()
+
+#sys.exit(1) #TODO: REMOVE
 
 print(len(all_actionabletransforms))
 print(len(all_actionabletransfers))
@@ -155,4 +162,5 @@ print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
 
 optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_basic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
 results = optimizer.findschedules()
+print("Top " + str(num_output_schedules) + " possible schedules:")
 solution_printer.printAllResults(results)

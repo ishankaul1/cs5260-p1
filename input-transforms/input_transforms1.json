@@ -1,0 +1,40 @@
+{
+  "transforms": [
+    {
+      "inputs": {
+        "Population": 5,
+        "MetallicElements": 1,
+        "Timber": 5,
+        "MetallicAlloys": 3
+      },
+      "outputs": {
+        "Housing": 1,
+        "HousingWaste": 1,
+        "Population": 5
+      }
+    },
+    {
+      "inputs": {
+        "Population": 1,
+        "MetallicElements": 2
+      },
+      "outputs": {
+        "Population": 1,
+        "MetallicAlloys": 1,
+        "MetallicAlloysWaste": 1
+      }
+    },
+    {
+      "inputs": {
+        "Population": 1,
+        "MetallicElements": 3,
+        "MetallicAlloys": 2
+      },
+      "outputs": {
+        "Population": 1,
+        "Electronics": 2,
+        "ElectronicsWaste": 1
+      }
+    }
+  ]
+}
