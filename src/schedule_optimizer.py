@@ -54,9 +54,11 @@ class Schedule_Optimizer:
                     #totally disregard if not less than the max depth. we shouldn't even hit this case really
                     if len(self.frontier) < self.max_frontier or (newstate.expected_utility > self.frontier.low()):
                         #if frontier not yet full or the new state is better than the worst of the frontier, insert in frontier and dont delete from mem
+                        #can mess with this logic to expand search space - may need to shy away from usage of the depq
                         self.frontier.insert(newstate, newstate.expected_utility)
                         deleteGeneratedState = False
                     if len(self.best_states) < self.num_outputs or newstate.expected_utility > self.best_states.low():
+                        #don't add to output states unless better than worst output state
                         self.best_states.insert(newstate, newstate.expected_utility)
                         deleteGeneratedState = False
                 if deleteGeneratedState:

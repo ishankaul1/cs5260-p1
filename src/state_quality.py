@@ -3,6 +3,6 @@
 #one country has at the time. The state quality function should output a value representative of how 'good' the current
 #state of that country is based on the resources
 
-#the most naive version possible
+#the most naive version possible, just for testing funzies
 def state_quality_basic(resources: dict)-> float:
     return sum(resources.values())
