@@ -160,7 +160,7 @@ print(len(all_actionabletransfers))
 #initialize and run scheduler
 print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
 
-optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_basic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
+optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_realistic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
 results = optimizer.findschedules()
 print("Top " + str(num_output_schedules) + " possible schedules:")
 solution_printer.printAllResults(results)
