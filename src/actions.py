@@ -30,8 +30,8 @@ def build_transfertemplates_from_resourceweights(resourceweights: dict):
             #print(weight2)
             #reduce
             weightgcd = gcd(weight1, weight2)
-            print('W1: ', str(weight1), ', ', 'W2: ', str(weight2))
-            print('GCD: ', str(weightgcd))
+            #print('W1: ', str(weight1), ', ', 'W2: ', str(weight2))
+            #print('GCD: ', str(weightgcd))
             if weightgcd != 1:
                 weight1 = weight1 / weightgcd
                 weight2 = weight2 / weightgcd

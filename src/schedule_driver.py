@@ -5,8 +5,9 @@ from os import path
 import csv
 import json
 import copy
+from datetime import datetime
 
-import solution_printer
+import solution_writer
 import actions
 import schedule_optimizer
 import state_quality
@@ -15,15 +16,18 @@ def err(msg: str):
     print('ERROR: ' + msg)
     sys.exit(1)
 
-usage = "driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size>"
-#easy test: python3 schedule_driver.py ../input-states/test_state_1.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json pp.pp X1 3 10 30
+usage = "driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size> <gamma> <k> <c>"
+#easy test: python3 schedule_driver.py ../input-states/test_state_1.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json pp.pp X1 3 10 30 0.99 0.3 -1
 
-if len(sys.argv) != 9:
+if len(sys.argv) != 12:
     print(usage)
     sys.exit(1)
 
 state_filename, resources_filename, transforms_filename, output_filename, my_country = sys.argv[1:6]
-max_depth, num_output_schedules, max_frontier_size = [int(x) for x in sys.argv[6:]]
+max_depth, num_output_schedules, max_frontier_size = [int(x) for x in sys.argv[6:9]]
+gamma = float(sys.argv[9])
+k = float(sys.argv[10])
+c = int(sys.argv[11])
 
 #sanity check the ints
 if max_depth < 1:
@@ -35,6 +39,17 @@ if num_output_schedules < 1:
 if max_frontier_size < 1:
     print("Max frontier size must be a number greater than 1")
     sys.exit(1)
+if gamma < 0 or gamma > 1:
+    print("Depth penalty must be float between 0 and 1")
+    sys.exit(1)
+if k < 0 or k > 1:
+    #I don't actually remember if this is true; should experiment a bit
+    print("Sigmoid parameter must be float between 0 and 1")
+    sys.exit(1)
+if c > 0:
+    print("Cost of failure must be a negative value")
+    sys.exit(1)
+
 
 #sanity check the filepaths
 if not path.isfile(state_filename):
@@ -98,11 +113,6 @@ state_rows = []
 for row in state_reader:
     state_rows.append(row)
 
-print('state header')
-print(state_header)
-print('resource header')
-print(resources_header)
-
 #Ensure state file and resource file resources are the same
 if (set(state_header[1:]) != set(resources_header)):
     err('Please ensure resources in resources file "' + resources_filename + '" and state file "' + state_filename + '" match.')
@@ -147,20 +157,35 @@ for template in all_transfertemplates:
     for other_country in other_countries:
         all_actionabletransfers.append(actions.ActionableTransfer(template=template, country1=my_country, country2=other_country))
 
-# for t in all_actionabletransfers:
-#     p = t.convertToPersistable(1)
-#     p.debug()
+#Create header to write to output file
+output_header = "OPTIMIZATION OUTPUT\n-----------------\n\nInit State: {}\nMy Country: {}\nParameters: (Frontier size: {}, Maximum depth {}, Output size: {}, Depth penalty(gamma): {}, Sigmoid parameter(k): {}, Cost of failure(c): {})\n".format(str(init_state), my_country, str(max_frontier_size), str(max_depth), str(num_output_schedules), str(gamma), str(k), str(c))
 
-#sys.exit(1) #TODO: REMOVE
 
-print(len(all_actionabletransforms))
-print(len(all_actionabletransfers))
-
+resources_file.close()
+state_file.close()
+transforms_file.close()
 
 #initialize and run scheduler
 print('ALL INPUTS INITIALIZED! BUILDING SCHEDULER')
 
-optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_realistic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=0.99, likelihood_param=0.3)
+optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actionable_transforms=all_actionabletransforms, actionable_transfers=all_actionabletransfers, state_quality_fn=state_quality.state_quality_realistic, my_country=my_country, max_depth=max_depth, max_frontier=max_frontier_size, num_outputs=num_output_schedules, depth_penalty=gamma, likelihood_param=k, cost_of_failure=c)
+
+print('RUNNING OPTIMIZATION')
+starttime = datetime.now()
 results = optimizer.findschedules()
-print("Top " + str(num_output_schedules) + " possible schedules:")
-solution_printer.printAllResults(results)
+runtime = datetime.now() - starttime
+
+output_runtime = '\nOptimization Runtime: {}\n\n'.format(runtime)
+
+
+print('DONE!!')
+
+allschedulestr = "Output Schedules:\n" + solution_writer.toAllScheduleString(results)
+
+output_file = open(output_filename, 'w')
+output_file.write(output_header + output_runtime + allschedulestr)
+
+
+output_file.close()
+
+

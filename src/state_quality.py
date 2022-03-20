@@ -18,8 +18,8 @@ def state_quality_realistic(resources: dict) -> float:
 
     #TODO: find a better way to normalize the minimum for these 3
     #idea: add factor 0.0000000001 to each ratio instead of the minimum
-    water_per_person_factor = -50 if resources['Water'] == 0 else max((resources['Water'] / resources['Population']) * 10, 30)
-    food_factor = -30 if resources['Food'] == 0 else min(math.log(resources['Food'] / resources['Population']) * 8, 30)
+    water_per_person_factor = -50 if resources['Water'] == 0 else min((resources['Water'] / resources['Population']) * 10, 30)
+    food_factor = -30 if resources['Food'] == 0 else min(math.log(resources['Food'] / resources['Population'], 3) * 8, 30)
     housing_factor = -20 if resources['Housing'] == 0 else min(math.log(resources['Housing'] / resources['Population'], 3) * 7,
                          30)  # terrible if low ratio, diminishing returns on too much
 
@@ -39,8 +39,5 @@ def state_quality_realistic(resources: dict) -> float:
     potentialfossilenergy_waste_factor = (resources['PotentialFossilEnergyUsableWaste'] / wastespread) * -8
     potentialrenewableenergy_waste_factor = (resources['PotentialRenewableEnergyUsableWaste'] / wastespread) * -6
 
-    #overpopulation factor
-    overpopulation_factor = 0 if resources['Population'] <= (3 * resources['Housing']) else -2 * (resources['Population'] - (3 * resources['Housing']))
-
-    return sum([population_baseline_factor, water_per_person_factor, food_factor, housing_factor, potentialfossilenergyusable_factor, potentialrenewableenergyusable_factor, electronics_factor, population_waste_factor, farm_waste_factor, metallic_waste_factor, electronics_waste_factor, housing_waste_factor, food_waste_factor, potentialfossilenergy_waste_factor, potentialrenewableenergy_waste_factor, overpopulation_factor])
+    return sum([population_baseline_factor, water_per_person_factor, food_factor, housing_factor, potentialfossilenergyusable_factor, potentialrenewableenergyusable_factor, electronics_factor, population_waste_factor, farm_waste_factor, metallic_waste_factor, electronics_waste_factor, housing_waste_factor, food_waste_factor, potentialfossilenergy_waste_factor, potentialrenewableenergy_waste_factor])
 

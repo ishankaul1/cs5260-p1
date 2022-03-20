@@ -5,7 +5,7 @@ from depq import DEPQ
 
 class Schedule_Optimizer:
     #requirements: init_state, actionable_transforms, actionable_transfers, state_quality_func, my_country, max_depth, max_frontier, num_outputs
-    def __init__(self, init_state: dict, actionable_transforms: list[actions.ActionableTransform], actionable_transfers: list[actions.ActionableTransfer], state_quality_fn, my_country: str, max_depth: int, max_frontier: int, num_outputs: int, depth_penalty: float, likelihood_param: float ):
+    def __init__(self, init_state: dict, actionable_transforms: list[actions.ActionableTransform], actionable_transfers: list[actions.ActionableTransfer], state_quality_fn, my_country: str, max_depth: int, max_frontier: int, num_outputs: int, depth_penalty: float, likelihood_param: float, cost_of_failure: int ):
         self.init_state = init_state
         self.actionable_transforms = actionable_transforms
         self.actionable_transfers = actionable_transfers
@@ -14,7 +14,7 @@ class Schedule_Optimizer:
         self.max_depth = max_depth
         self.max_frontier = max_frontier
         self.num_outputs = num_outputs
-        self.state_generator = state.StateGenerator(my_country=my_country, init_state=init_state, state_quality_function=state_quality_fn, k=likelihood_param, gamma=depth_penalty)
+        self.state_generator = state.StateGenerator(my_country=my_country, init_state=init_state, state_quality_function=state_quality_fn, k=likelihood_param, gamma=depth_penalty, c=cost_of_failure)
 
         #stuff needed to start optimizing
         init_statenode = state.StateNode(state=init_state, schedule=[], schedule_likelihood=1, expected_utility=0)

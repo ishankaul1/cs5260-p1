@@ -8,10 +8,25 @@ import actions
 import actions
 import sigmoid_activation
 
+
+#Data structure specifically used in writing output schedules, to represent information about the state and state quality in
+#a schedule's history WITHOUT having to refer to the entire state
+class PersistedState:
+    def __init__(self, persisted_action: actions.PersistableAction, schedule_likelihood: float, discounted_reward: float, expected_utility: float):
+        self.persisted_action = persisted_action
+        self.schedule_likelihood = schedule_likelihood
+        self.discounted_reward = discounted_reward
+        self.expected_utility = expected_utility
+
+    def toString(self):
+        output_str = self.persisted_action.toString()
+        output_str = output_str + "\t\t\tStatistics: (Reward: {}, Likelihood: {}, Exp_Utility: {}\n".format(self.discounted_reward, self.schedule_likelihood, self.expected_utility)
+        return output_str
+
 #Just use to hold and get information about the state that needs to be memoized
 @total_ordering
 class StateNode:
-    def __init__(self, state: dict, schedule: list[actions.PersistableAction], schedule_likelihood: float, expected_utility: float):
+    def __init__(self, state: dict, schedule: list[PersistedState], schedule_likelihood: float, expected_utility: float):
         self.state = state
         self.schedule = schedule
         self.schedule_likelihood = schedule_likelihood
@@ -28,12 +43,12 @@ class StateNode:
     def __copy__(self):
         return StateNode(state=copy.deepcopy(self.state), schedule=copy.deepcopy(self.schedule), schedule_likelihood=self.schedule_likelihood, expected_utility=self.expected_utility)
 
-    def toScheduleString(self):
-        scheduleStr = ""
-        for x in self.schedule:
-            scheduleStr = scheduleStr + x.toString() + ', '
-
-        return scheduleStr[:-2]
+    # def toScheduleString(self):
+    #     scheduleStr = ""
+    #     for x in self.schedule:
+    #         scheduleStr = scheduleStr + x.toString() + ', '
+    #
+    #     return scheduleStr[:-2]
 
     def debug(self):
         print('State:')
@@ -44,20 +59,25 @@ class StateNode:
         print('\nexpected_utility: ' + str(self.expected_utility))
 
 
+
+
 #All functionality for creating a new state node from a state and transaction
 #Is a static, one-use object
 class StateGenerator:
     #Initial state - state of the world at the very beginning. Used to calculate initial state qualities for later discounted reward calculation.
     #State quality function - takes in a dict of {resouce: value} mappings for ONE country, and outputs an int that represents the quality of the state for that country.
-    def __init__(self, my_country: str, init_state: dict, state_quality_function, gamma: float, k: float):
+    def __init__(self, my_country: str, init_state: dict, state_quality_function, gamma: float, k: float, c: int):
         #TODO for pure cleanliness purposes: move my_country, (maybe?) init_state, state_quality_function, k and gamma into a calculation_context object
         #Could generate k from state qual function ouput range
         if gamma < 0 or gamma > 1:
             raise Exception('Gamma must be between 0 and 1')
+        if c > 0:
+            raise Exception('C must be a negative number')
         self.gamma = gamma
         self.k = k
         self.my_country = my_country
         self.state_quality_function = state_quality_function
+        self.c = c
         #For all state generation, we need to have access to the INITIAL utility of each country, so that we can determine
         #the final discounted reward of each transaction
         self.init_utilities: dict = self.calc_init_utilities(init_state)
@@ -177,31 +197,38 @@ class StateGenerator:
         # #2. Copy state, perform action, generate a new persistable action for schedule and calculations, and get your discounted reward
         newstate = copy.copy(init_state)
         self.performactiononstate(action=transaction, statenode=newstate, scalar=scalar)
-        actionRecord = transaction.convertToPersistable(scalar)
-        newstate.schedule.append(actionRecord)
+        actionPersistable = transaction.convertToPersistable(scalar)
+        #newstate.schedule.append(actionRecord) APPEND TO SCHEDULE LATER
         #print(len(newstate.schedule))
-        my_discountedreward = self.calc_discounted_reward(state=newstate, country=self.my_country)
+        my_discountedreward = self.calc_discounted_reward(state=newstate.state, country=self.my_country, depth=len(init_state.schedule)+1)
 
         # #3. If action was a transfer, get the discounted reward of second country to get the action likelihood. Then, multiply by
         # the newstate's current schedule_likelihood to get the new overall likelihood
         if isinstance(transaction, actions.ActionableTransfer): #likelihood only changes when another country is involved
             #print("we're stuck in the transfer loop")
-            other_discountedreward = self.calc_discounted_reward(state=newstate, country=transaction.country2) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
+            other_discountedreward = self.calc_discounted_reward(state=newstate.state, country=transaction.country2, depth=len(init_state.schedule)+1) #ASSUMPTION FOR THIS PROGRAM IS THAT COUNTRY2 IS ALWAYS THE OTHER
             action_likelihoood = self.calc_likelihood_from_reward(other_discountedreward)
             newstate.schedule_likelihood = newstate.schedule_likelihood * action_likelihoood
 
         # #5. Use country1 discounted reward and likelihood to calc expected utility
-        newstate.expected_utility = newstate.schedule_likelihood * my_discountedreward
+        newstate.expected_utility = self.calc_expectedutility(schedule_likelihood=newstate.schedule_likelihood,discounted_reward=my_discountedreward)
 
+        # Create persisted information for the schedule
+        newPersistedScheduleState = PersistedState(discounted_reward=my_discountedreward, expected_utility=newstate.expected_utility, schedule_likelihood=newstate.schedule_likelihood, persisted_action=actionPersistable)
+        newstate.schedule.append(newPersistedScheduleState)
         # #Return!!
         return newstate
 
+    def calc_expectedutility(self, schedule_likelihood, discounted_reward):
+        utility_success = schedule_likelihood * discounted_reward
+        utility_fail = self.c * (1 - schedule_likelihood)
+        return utility_success + utility_fail
+
     #Calculates overall discounted reward for a state & country. Uses state quality function result of newstate, depth, and init_utility.
     #Formula:
-    def calc_discounted_reward(self, state: StateNode, country: str) -> float:
+    def calc_discounted_reward(self, state: dict, country: str, depth: int) -> float:
         init_utility = self.init_utilities[country]
-        depth = len(state.schedule)
-        current_utility = self.state_quality_function(state.state[country])
+        current_utility = self.state_quality_function(state[country])
         discount_factor = self.gamma ** depth
         discounted_utility = current_utility * discount_factor
         return discounted_utility - init_utility
