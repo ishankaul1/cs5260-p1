@@ -16,17 +16,17 @@ python3 schedule_driver.py <initial state filepath> <resource weight filepath> <
 python3 schedule_driver.py ../input-states/test_state_5.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json ../output/experiment_initstate_results/state5.out X1 5 15 15 0.99 0.3 -1
 ```
 
-    To shortly summarize the logic flow, schedule_driver creates one instance of Schedule_Optimizer from schedule_optimizer.py, initialized based on the inputs to the driver. This optimizer contains all the main logic for the search algorithm and generation of successors.
+To shortly summarize the logic flow, schedule_driver creates one instance of Schedule_Optimizer from schedule_optimizer.py, initialized based on the inputs to the driver. This optimizer contains all the main logic for the search algorithm and generation of successors.
 
-    'state.py' contains the StateNode and PersistedState data structures, as well a StateGenerator class that does most of the heavy lifting for calculating new states, utilities, etc.
+'state.py' contains the StateNode and PersistedState data structures, as well a StateGenerator class that does most of the heavy lifting for calculating new states, utilities, etc.
 
-    'actions.py' contains a bunch of data structures and classes that I used for creating transform and transfer templates, converting them to performable actions in the program, and finally persisting information in the schedules.
+'actions.py' contains a bunch of data structures and classes that I used for creating transform and transfer templates, converting them to performable actions in the program, and finally persisting information in the schedules.
 
-    'state_quality.py' contains a couple possible state quality functions; the more interesting one is 'state_quality_realistic()'
+'state_quality.py' contains a couple possible state quality functions; the more interesting one is 'state_quality_realistic()'
 
-    'sigmoid_activation.py' contains my implementation of the sigmoid activation function, and solution_writer is just a helper function for creating a massive string that summarizes the schedule outputs.
+'sigmoid_activation.py' contains my implementation of the sigmoid activation function, and solution_writer is just a helper function for creating a massive string that summarizes the schedule outputs.
 
-    The directory 'test/' contains some unit tests I used for some of the lower level logic surrounding states and actions at the early stages of the project.
+The directory 'test/' contains some unit tests I used for some of the lower level logic surrounding states and actions at the early stages of the project.
 
 Video and Powerpoint: 
     Located in the 'presentation/' directory. Video is a text file link, powerpoint is the actual .pptx file.
