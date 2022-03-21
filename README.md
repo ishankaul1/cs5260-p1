@@ -29,7 +29,7 @@ To shortly summarize the logic flow, schedule_driver creates one instance of Sch
 The directory 'test/' contains some unit tests I used for some of the lower level logic surrounding states and actions at the early stages of the project.
 
 ## Video and Powerpoint
-Located in the 'presentation/' directory. Video is a text file link, powerpoint is the actual .pptx file.
+Located in the 'presentation/' directory. Video is a text file link, powerpoint is the 'TalkSlides.pptx' file. Not the one with the tilda in front of it; I'm not exactly sure what that is or if I can delete it without messing with how the actual powerpoint renders on my Mac.
 
 ## Test Case Summary
 Located in 'testcase_summary/summary.pdf'
