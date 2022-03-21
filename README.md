@@ -32,7 +32,7 @@ The directory 'test/' contains some unit tests I used for some of the lower leve
 Located in the 'presentation/' directory. Video is a text file link, powerpoint is the actual .pptx file.
 
 ## Test Case Summary
-Located in 'testcase_summary/summary.txt'
+Located in 'testcase_summary/summary.pdf'
 This contains an explanation of my experiments, as well as the results and analysis.
 
 ## Input Files
