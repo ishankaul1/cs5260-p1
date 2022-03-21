@@ -2,7 +2,7 @@
 
 This readme holds all the 'logistical' information about where submission materials are located for the Part 1 assignment.
 
-Source Code:
+**Source Code**
     All of the source code is located in the 'src/' directory. The top-level function is schedule_driver.py, which takes in all required input filename and parameters, runs the schedule optimizer, and writes to output files.
     Usage of schedule_driver.py from the command line (assuming you are already in the src/ directory) is as follows:
 
@@ -28,20 +28,20 @@ To shortly summarize the logic flow, schedule_driver creates one instance of Sch
 
 The directory 'test/' contains some unit tests I used for some of the lower level logic surrounding states and actions at the early stages of the project.
 
-Video and Powerpoint: 
+**Video and Powerpoint** 
     Located in the 'presentation/' directory. Video is a text file link, powerpoint is the actual .pptx file.
 
-Test Case Summary:
+**Test Case Summary**
     Located in 'testcase_summary/summary.txt'
     This contains an explanation of my experiments, as well as the results and analysis.
 
-Input Files:
+**Input Files**
     I organized my input files by directory.
     'input-states' contains different initial state files I used for experiments in CSV format.
     'input-transforms' contains the transform file I used, in JSON format.
     'input-resource-weights' contains a csv with 'weights' for each resource that I used for trades in my game world. The weights really represent the value of each resource (or cost of waste) with respect to some global currency, to make logic around trading easier. This is explained in more detail in the video/slides. The file is in CSV format.
 
-Output Files:
+**Output Files**
     All output files for my experiment are located in the 'output/' directory. The outputs for each experiment are organized by sub-directory.
     'output/experiment_depth_results' contains all output files for my depth experiment.
     'output/experiment_frontiersize_results' contains all output files for my frontier size experiment.
