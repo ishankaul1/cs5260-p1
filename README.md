@@ -6,15 +6,15 @@ Source Code:
     All of the source code is located in the 'src/' directory. The top-level function is schedule_driver.py, which takes in all required input filename and parameters, runs the schedule optimizer, and writes to output files.
     Usage of schedule_driver.py from the command line (assuming you are already in the src/ directory) is as follows:
 
-    ```
-    python3 schedule_driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size> <gamma> <k> <c>
-    ```
+```
+python3 schedule_driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size> <gamma> <k> <c>
+```
 
     Example command that I actually used to run one of my tests, using the input files in this repository:
 
-    ```
-     python3 schedule_driver.py ../input-states/test_state_5.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json ../output/experiment_initstate_results/state5.out X1 5 15 15 0.99 0.3 -1
-    ```
+```
+python3 schedule_driver.py ../input-states/test_state_5.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json ../output/experiment_initstate_results/state5.out X1 5 15 15 0.99 0.3 -1
+```
 
     To shortly summarize the logic flow, schedule_driver creates one instance of Schedule_Optimizer from schedule_optimizer.py, initialized based on the inputs to the driver. This optimizer contains all the main logic for the search algorithm and generation of successors.
 
