@@ -173,9 +173,9 @@ optimizer = schedule_optimizer.Schedule_Optimizer(init_state=init_state, actiona
 print('RUNNING OPTIMIZATION')
 starttime = datetime.now()
 results = optimizer.findschedules()
-runtime = datetime.now() - starttime
+runtime = (datetime.now() - starttime).total_seconds()
 
-output_runtime = '\nOptimization Runtime: {}\n\n'.format(runtime)
+output_runtime = '\nOptimization Runtime (seconds): {}\n\n'.format(runtime)
 
 
 print('DONE!!')
