@@ -10,7 +10,7 @@ Source Code:
 python3 schedule_driver.py <initial state filepath> <resource weight filepath> <transforms_filepath> <output schedule filepath> <optimizing country name> <max depth> <# output schedules> <maximum frontier size> <gamma> <k> <c>
 ```
 
-    Example command that I actually used to run one of my tests, using the input files in this repository:
+Example command that I actually used to run one of my tests, using the input files in this repository:
 
 ```
 python3 schedule_driver.py ../input-states/test_state_5.csv ../input-resource-weights/test_resource_weights_1.csv ../input-transforms/input_transforms1.json ../output/experiment_initstate_results/state5.out X1 5 15 15 0.99 0.3 -1
